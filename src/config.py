@@ -2,6 +2,29 @@ import json
 import os
 import click
 
+from dotenv import load_dotenv
+
+# Reads .env and sets environment variables
+load_dotenv()
+
+from utils import get_environment_value
+
+PARALLEL_UPLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 4)
+# Telegram max files per album
+ALBUM_FILES = 10
+# Number of retries for upload
+RETRIES = 3
+# Max number of retries for reconnect
+MAX_RECONNECT_RETRIES = get_environment_value('TELEGRAM_UPLOAD_MAX_RECONNECT_RETRIES', 5)
+# Reconnect timeout
+RECONNECT_TIMEOUT = get_environment_value('TELEGRAM_UPLOAD_RECONNECT_TIMEOUT', 5)
+# Time to wait before retry to connect
+MIN_RECONNECT_WAIT = get_environment_value('TELEGRAM_UPLOAD_MIN_RECONNECT_WAIT', 5)
+
+CHANNEL_NAME = get_environment_value('TELEGRAM_UPLOAD_CHANNEL_NAME', 'Telegram-UI-Database')
+API_ID = get_environment_value('TELEGRAM_UPLOAD_API_ID', 123456)
+API_HASH = get_environment_value('TELEGRAM_UPLOAD_API_HASH', 'your_api_hash_here')
+
 # -------------------------------------
 # Versions
 # I put versions here to be able to handle changes in the future
