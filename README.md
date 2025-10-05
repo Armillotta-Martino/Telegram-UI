@@ -65,8 +65,6 @@
 
 This is a simple project written in Python to upload files to Telegram. The idea come from my passion for drone and videos. I started to take a lot of videos while flying my FPV drone and a lot of them are useless but i did't want to trash them as they are a part of my learning process. So i decided to build this software that allow me to keep them and be able to always watch them
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 ### Built With
@@ -74,8 +72,6 @@ This is a simple project written in Python to upload files to Telegram. The idea
 This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
 
 * [![Python][Python]][Python-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
@@ -131,8 +127,6 @@ Run the application
 python src/main.py
 ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- ROADMAP -->
 ## Roadmap
@@ -142,10 +136,10 @@ python src/main.py
 - [X] Automatically download FFMPEG
 - [ ] Design a better UI
 - [ ] Add a move function
+- [ ] Be able to handle every type of file
+- [ ] Add the possibility of open a big preview of the file
 
 See the [open issues](https://github.com/Armillotta-Martino/Telegram-UI/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -166,16 +160,12 @@ Don't forget to give the project a star! Thanks again!
 
 Distributed under the MIT License.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- CONTACT -->
 ## Contact
 
 Armillotta Martino - [@martinoarmillotta]([https://twitter.com/your_username](https://www.instagram.com/martinoarmillotta/)) - armillottamartino@gmail.com
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
