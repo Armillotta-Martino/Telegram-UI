@@ -10,9 +10,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/Armillotta-Martino/Telegram-UI">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
+  [![Logo](images/logo.png)](https://github.com/Armillotta-Martino/Telegram-UI)
 
   <h3 align="center">Telegram-UI</h3>
 
