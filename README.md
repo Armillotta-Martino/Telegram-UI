@@ -10,20 +10,14 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/Armillotta-Martino/Telegram-UI">
-  <img src="images/logo.png" alt="Logo" width="80" height="80">
-</a>
+  ![Logo](/images/logo.png)
 
   <h3 align="center">Telegram-UI</h3>
 
   <p align="center">
     A Telegram project to upload videos in a Telegram channel and use it as a cloud storage
     <br />
-    <a href="https://github.com/Armillotta-Martino/Telegram-UI"><strong>Explore the docs »</strong></a>
     <br />
-    <br />
-    <a href="https://github.com/Armillotta-Martino/Telegram-UI">View Demo</a>
-    &middot;
     <a href="https://github.com/Armillotta-Martino/Telegram-UI/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
     <a href="https://github.com/Armillotta-Martino/Telegram-UI/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
