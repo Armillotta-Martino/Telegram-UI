@@ -209,3 +209,6 @@ __marimo__/
 # Session files
 *.session
 *.session-journal
+
+# Ffmpeg files
+ffmpeg/*
