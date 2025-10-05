@@ -1,7 +1,6 @@
 import os
 import re
 import shutil
-from telegram_upload.exceptions import TelegramEnvironmentError
 
 def free_disk_usage(
     directory : str = '.'
@@ -77,11 +76,11 @@ def get_environment_value(environment_name: str, default_value):
             try:
                 return json.loads(raw_value)
             except Exception:
-                raise TelegramEnvironmentError(
+                raise Exception(
                     f"Cannot convert {environment_name}='{raw_value}' to {target_type.__name__}"
                 )
 
     except Exception as e:
-        raise TelegramEnvironmentError(
+        raise Exception(
             f"Environment variable {environment_name} must be of type {target_type.__name__}, got '{raw_value}'"
         ) from e
