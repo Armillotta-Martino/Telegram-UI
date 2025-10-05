@@ -9,8 +9,8 @@
 
 <!-- PROJECT LOGO -->
 <br />
+![Logo](/images/logo.png)
 <div align="center">
-  ![Logo](/images/logo.png)
 
   <h3 align="center">Telegram-UI</h3>
 
@@ -65,7 +65,7 @@ This is a simple project written in Python to upload files to Telegram. The idea
 
 This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
 
-* [![Python][Python]][Python-url]
+[![Python][Python]][Python-url]
 
 
 
