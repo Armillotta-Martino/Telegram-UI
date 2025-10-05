@@ -9,7 +9,7 @@
 
 <!-- PROJECT LOGO -->
 <br />
-![Logo](images/logo.png)
+![Logo](./images/logo.png)
 <div align="center">
 
   <h3 align="center">Telegram-UI</h3>
