@@ -6,9 +6,12 @@ import subprocess
 from threading import Thread
 import time
 from typing import List
+import zipfile
 import click
 
 from typing import TYPE_CHECKING
+
+import requests
 if TYPE_CHECKING:
     from video import Video
 
@@ -20,6 +23,22 @@ FFPROBE_NAME = "ffprobe.exe"
 FFPROBE_PATH_JSON = "ffprobePath"
 
 class FFMPEG():
+    @classmethod
+    def ensure_ffmpeg():
+        if not os.path.exists("ffmpeg/ffmpeg.exe"):
+            print("Downloading ffmpeg...")
+            os.makedirs("ffmpeg", exist_ok=True)
+            url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+            r = requests.get(url)
+            with open("ffmpeg.zip", "wb") as f:
+                f.write(r.content)
+            with zipfile.ZipFile("ffmpeg.zip", "r") as zip_ref:
+                zip_ref.extractall("ffmpeg_temp")
+            os.rename("ffmpeg_temp/bin/ffmpeg.exe", "ffmpeg/ffmpeg.exe")
+            os.rename("ffmpeg_temp/bin/ffprobe.exe", "ffmpeg/ffprobe.exe")
+            os.rename("ffmpeg_temp/bin/ffplay.exe", "ffmpeg/ffplay.exe")
+            print("ffmpeg installed successfully.")
+        
     @classmethod
     def __get_command_path(
         self, 
