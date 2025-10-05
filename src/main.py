@@ -4,7 +4,7 @@ from tkinter import messagebox, filedialog
 from xml.dom.minidom import Entity
 
 from file_manager import FileManager
-from file_types.compression import FFMPEG
+from file_types.compression.FFMPEG import FFMPEG
 from file_types.file import File
 from config import API_ID, API_HASH, CHANNEL_NAME
 from ui.pop_up_textinput import PopUpTextInput
@@ -179,15 +179,16 @@ async def main_async():
 
 def run_app():
     FFMPEG.ensure_ffmpeg()
-    loop.run_until_complete(asyncio.gather(
-        main_async(),  # client.start + dialog_dict
-        run_tk()       # Tkinter in separate task
-    ))
+    loop.run_until_complete(
+        asyncio.gather(
+            main_async(),  # client.start + dialog_dict
+            run_tk()       # Tkinter in separate task
+        )
+    )
 
 async def run_tk():
     while True:
         root.update()
         await asyncio.sleep(0.01)
-
 # Run
 run_app()
