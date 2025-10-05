@@ -141,6 +141,7 @@ python src/main.py
 - [ ] Change the file image with a preview
 - [X] Automatically download FFMPEG
 - [ ] Design a better UI
+- [ ] Add a move function
 
 See the [open issues](https://github.com/Armillotta-Martino/Telegram-UI/issues) for a full list of proposed features (and known issues).
 
@@ -193,7 +194,7 @@ Armillotta Martino - [@martinoarmillotta]([https://twitter.com/your_username](ht
 [license-url]: https://github.com/Armillotta-Martino/Telegram-UI/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 
-[linkedin-url]: https://linkedin.com/in/othneildrew
+[linkedin-url]: https://www.linkedin.com/in/martino-armillotta-702a1316a/
 [product-screenshot]: images/screenshot.png
 
 [Python]: https://img.shields.io/badge/python-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
