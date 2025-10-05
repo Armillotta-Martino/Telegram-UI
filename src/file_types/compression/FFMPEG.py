@@ -2,6 +2,7 @@ from ctypes import c_int64
 import json
 import os
 import re
+import shutil
 import subprocess
 from threading import Thread
 import time
@@ -23,20 +24,42 @@ FFPROBE_NAME = "ffprobe.exe"
 FFPROBE_PATH_JSON = "ffprobePath"
 
 class FFMPEG():
-    @classmethod
+    @staticmethod
     def ensure_ffmpeg():
-        if not os.path.exists("ffmpeg/ffmpeg.exe"):
+        ffmpeg_dir = "ffmpeg"
+        if not os.path.exists(os.path.join(ffmpeg_dir, "ffmpeg.exe")):
             print("Downloading ffmpeg...")
-            os.makedirs("ffmpeg", exist_ok=True)
+            os.makedirs(ffmpeg_dir, exist_ok=True)
+
+            # Download zip
             url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-            r = requests.get(url)
-            with open("ffmpeg.zip", "wb") as f:
+            r = requests.get(url, stream=True)
+            zip_path = "ffmpeg.zip"
+            with open(zip_path, "wb") as f:
                 f.write(r.content)
-            with zipfile.ZipFile("ffmpeg.zip", "r") as zip_ref:
+
+            # Extract zip
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall("ffmpeg_temp")
-            os.rename("ffmpeg_temp/bin/ffmpeg.exe", "ffmpeg/ffmpeg.exe")
-            os.rename("ffmpeg_temp/bin/ffprobe.exe", "ffmpeg/ffprobe.exe")
-            os.rename("ffmpeg_temp/bin/ffplay.exe", "ffmpeg/ffplay.exe")
+
+            # Find the bin folder dynamically
+            bin_folder = None
+            for root, dirs, files in os.walk("ffmpeg_temp"):
+                if "ffmpeg.exe" in files:
+                    bin_folder = root
+                    break
+
+            if not bin_folder:
+                raise FileNotFoundError("Could not find ffmpeg.exe in the extracted zip!")
+
+            # Move binaries to 'ffmpeg' folder
+            for exe in ["ffmpeg.exe", "ffprobe.exe", "ffplay.exe"]:
+                shutil.move(os.path.join(bin_folder, exe), os.path.join(ffmpeg_dir, exe))
+
+            # Cleanup
+            shutil.rmtree("ffmpeg_temp")
+            os.remove(zip_path)
+
             print("ffmpeg installed successfully.")
         
     @classmethod
