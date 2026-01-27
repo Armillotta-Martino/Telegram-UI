@@ -19,11 +19,7 @@
   <p align="center">
     A Telegram project to upload videos in a Telegram channel and use it as a cloud storage
     <br />
-    <a href="https://github.com/Armillotta-Martino/Telegram-UI"><strong>Explore the docs »</strong></a>
     <br />
-    <br />
-    <a href="https://github.com/Armillotta-Martino/Telegram-UI">View Demo</a>
-    &middot;
     <a href="https://github.com/Armillotta-Martino/Telegram-UI/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
     <a href="https://github.com/Armillotta-Martino/Telegram-UI/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
@@ -71,7 +67,7 @@ This is a simple project written in Python to upload files to Telegram. The idea
 
 This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
 
-* [![Python][Python]][Python-url]
+[![Python][Python]][Python-url]
 
 
 
