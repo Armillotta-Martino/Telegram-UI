@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import Image, ttk
 from xml.dom.minidom import Entity
 
+from config import ICON_FILE_PATH, ICON_FOLDER_PATH
 from file_manager import FileManager
 from dbJson.file_message import FileMessage
 from telegram.telegram_manager_client import TelegramManagerClient
@@ -10,14 +11,19 @@ from PIL import Image, ImageTk
 
 class FileBrowserPane:
     """ 
-        A pane for browsing files in a Telegram chat.
-        It allows navigating through folders, selecting files, and displaying their contents.
+    A pane for browsing files in a Telegram chat.
+    It allows navigating through folders, selecting files, and displaying their contents.
     """
+    
+    ### Constants
+    # Icon sizes
     ICON_SIZE = (64, 64)
+    # Grid configuration
     GRID_COLUMNS = 4
+    # File icons paths
     FILE_ICONS = {
-        'folder': 'icons/folder.png',
-        'default': 'icons/file.png'
+        'folder': ICON_FOLDER_PATH,
+        'default': ICON_FILE_PATH
     }
     
     # Parent thinker element
@@ -37,24 +43,33 @@ class FileBrowserPane:
     
     @property
     def current_position(self) -> FileMessage:
+        """
+        Get the current folder position
+        
+        Returns:
+            FileMessage: The current folder message
+        """
         return self.__current
     
     @property
     def selected(self) -> FileMessage:
+        """
+        Get the currently selected file message
+        
+        Returns:
+            FileMessage: The currently selected file message
+        """
         return self.__selected_button.message
         
-    async def go_to_path(
-        self,
-        client : TelegramManagerClient,
-        message : FileMessage
-        ):
+    async def go_to_path(self, client : TelegramManagerClient, message : FileMessage):
         """
-            Navigate to the specified folder message
+        Navigate to the specified folder message
 
-            Args:
-                message (FileMessage): _description_
+        Args:
+            client: The Telegram client
+            message: The folder message to navigate to
         """
-        # Update the path bar text
+        # Calculate the new path
         folder_name = message.file_name
         current_path = self.__path_var.get()
         new_path = current_path + "\\" + folder_name if current_path else folder_name
@@ -63,18 +78,20 @@ class FileBrowserPane:
         
         # TODO Check if it is a valid child
         
-        # Update the current positon
+        # Update the current position
         self.__current = message
+        
+        # Render the new folder
         await self.render_current_folder(client)
     
-    async def go_back_path(
-        self,
-        client : TelegramManagerClient
-        ):
+    async def go_back_path(self, client : TelegramManagerClient):
         """
-            Navigate back to the parent folder
+        Navigate back to the parent folder
+        
+        Args:
+            client: The Telegram client
         """
-        # Update the path bar text
+        # Calculate the new path
         if '\\' in self.__path_var.get():
             split = self.__path_var.get().rsplit('\\', 1)
             self.__path_var.set(split[0])
@@ -82,40 +99,37 @@ class FileBrowserPane:
             self.__path_var.set("")
         
         
-        # Update the current positon
+        # Update the current position
         parent = await self.__current.get_parent(client)
         self.__current = parent
         
+        # Render the new folder
         await self.render_current_folder(client)
 
-    def __init__(
-        self, 
-        parent,
-        chat_instance : Entity
-        ):
+    def __init__(self, parent, chat_instance : Entity):
         """
-            Initialize the FileBrowserPane
+        Initialize the FileBrowserPane
 
         Args:
-            parent (_type_): _description_
-            chat_instance (Entity): _description_
+            parent: The parent tkinter element
+            chat_instance: The Telegram chat instance
         """
+        # Store the parent element
         self.__parent = parent
-        
+        # Store the chat instance
         self.__chat_instance = chat_instance
-
+        # Load icons
         self.icons = {
             'folder': self.__load_icon(self.FILE_ICONS['folder'], self.ICON_SIZE),
             'default': self.__load_icon(self.FILE_ICONS['default'], self.ICON_SIZE)
         }
-
+        
+        # Initialize the UI
         self.__init_ui()
         
-    def __init_ui(
-        self
-        ):
+    def __init_ui(self):
         """
-            Initialize the UI components of the file browser pane.
+        Initialize the UI components of the file browser pane.
         """
         # --- Path Display (top) ---
         self.__path_var = tk.StringVar()
@@ -125,11 +139,12 @@ class FileBrowserPane:
         # --- Main area ---
         main_frame = tk.Frame(self.__parent)
         main_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-
+        
+        # Canvas background
         canvas = tk.Canvas(main_frame, background="white")
+        # Scrollbar
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
         self.__scroll_frame = tk.Frame(canvas)
-
         self.__scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=self.__scroll_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
@@ -137,54 +152,53 @@ class FileBrowserPane:
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    async def init_root(
-        self,
-        client : TelegramManagerClient
-        ):
+    async def init_root(self, client : TelegramManagerClient):
         """
-            Initialize the root folder by fetching or creating the root message
+        Initialize the root folder by fetching or creating the root message
+        
+        Args:
+            client: The Telegram client
         """
         # Get the pinned message
         root_message = await FileManager.get_root(client, self.__chat_instance)
         
+        # Check if the root message is initialized
         if root_message is None or root_message.telegram_message is None:
             # Create the root message and pin it
             root_message = await FileManager.create_root(client, self.__chat_instance)
         
+        # Set the root and current positions
         self.__root = root_message
         self.__current = root_message
         
         # Render the root folder
         asyncio.create_task(self.render_current_folder(client))
     
-    def __load_icon(
-        self, 
-        path, 
-        size
-        ):
+    def __load_icon(self, path: str, size: tuple) -> ImageTk.PhotoImage:
         """
-            Load and resize an icon image from the specified path
-
+        Load and resize an icon image from the specified path
+        
+        This is used to load icons for files and folders in the file browser
+        
         Args:
-            path (_type_): _description_
-            size (_type_): _description_
-
+            path: The path to the icon image
+            size: The desired size (width, height) of the icon
         Returns:
-            _type_: _description_
+            ImageTk.PhotoImage: The loaded and resized icon image
         """
         img = Image.open(path).resize(size, Image.Resampling.LANCZOS)
         return ImageTk.PhotoImage(img)
         
-    async def render_current_folder(
-        self,
-        client : TelegramManagerClient
-        ):
+    async def render_current_folder(self, client : TelegramManagerClient):
         """
-            Render the contents of the current folder in the UI
+        Render the contents of the current folder in the UI
+        
+        Args:
+            client: The Telegram client
         """
         
         # Get the children of the current folder
-        children = await self.__current.get_childrens(client)
+        children = await self.__current.get_children(client)
         
         # Clear the view
         for widget in self.__scroll_frame.winfo_children():
@@ -192,14 +206,17 @@ class FileBrowserPane:
 
         row = 0
         col = 0
+        # Render each child item
         for item in children:
             is_dir = item.is_folder
             name = item.file_name
             icon = self.icons['folder'] if is_dir else self.icons['default']
-
+            
+            # Create a frame for each item
             frame = tk.Frame(self.__scroll_frame, width=100, height=100)
             frame.grid(row=row, column=col, padx=15, pady=15)
-
+            
+            # Create the button with icon and name
             btn = tk.Button(frame, image=icon, text=name, compound="top", wraplength=80, relief='flat', background="white")
             btn.message = item
             # Bind single click to selection
@@ -215,15 +232,12 @@ class FileBrowserPane:
                 col = 0
                 row += 1
 
-    def on_item_select(
-        self, 
-        button : tk.Button
-        ):
+    def on_item_select(self, button : tk.Button):
         """
-            Handle the selection of an item in the file browser
+        Handle the selection of an item in the file browser
             
-            Args:
-                button (tk.Button): The button representing the selected item
+        Args:
+            button: The button representing the selected item
         """
         
         # Deselect the previously selected button if it still exists
@@ -237,16 +251,13 @@ class FileBrowserPane:
         # Save the selected item in a variable
         self.__selected_button = button
 
-    def on_item_double_click(
-        self,
-        client : TelegramManagerClient,
-        message : FileMessage
-        ):
+    def on_item_double_click(self, client : TelegramManagerClient, message : FileMessage):
         """
-            Handle the double-click action on an item in the file browser
+        Handle the double-click action on an item in the file browser
             
-            Args:
-                message (FileMessage): The file message representing the double-clicked item
+        Args:
+            client: The Telegram client
+            message: The file message representing the double-clicked item
         """
         
         if message.is_folder:

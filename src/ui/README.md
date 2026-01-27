@@ -1,0 +1,1 @@
+This folder contains the code with the UI of the project

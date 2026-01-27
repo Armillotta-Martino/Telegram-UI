@@ -1,21 +1,28 @@
 import os
 import re
 import shutil
+import json
 
-def free_disk_usage(
-    directory : str = '.'
-    ) -> int:
+def free_disk_usage(directory : str = '.') -> int:
     """
-    Get total disk free space
+    Get the free disk usage in bytes
+    
+    Args:
+        directory: The directory to check the disk usage for. Defaults to current directory.
+    Returns:
+        int: The free disk usage in bytes
     """
     return shutil.disk_usage(directory)[2]
 
-def size_value_to_human(
-    num : int, 
-    suffix : str = 'B'
-    ) -> str:
+def size_value_to_human(num : int, suffix : str = 'B') -> str:
     """
-    Convert file size to a more human readable way
+    Convert a size in bytes to a human readable format
+    
+    Args:
+        num: The size in bytes
+        suffix: The suffix to append to the size. Defaults to 'B'.
+    Returns:
+        str: The size in a human readable format
     """
     for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
         if abs(num) < 1024.0:
@@ -23,20 +30,16 @@ def size_value_to_human(
         num /= 1024.0
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
-def phone_match(
-    value: str
-    ) -> str:
+def phone_match(value: str) -> str:
     """
-    Validate a phone number
-
+    Validate if the given string is a valid phone number format
+    
     Args:
-        value (_type_): _description_
-
-    Raises:
-        ValueError: _description_
-
+        value: The phone number string to validate
     Returns:
-        _type_: _description_
+        str: The validated phone number string
+    Raises:
+        ValueError: If the string is not a valid phone number format
     """
     match = re.match(r'\+?[0-9.()\[\] \-]+', value)
     if match is None:
@@ -45,9 +48,17 @@ def phone_match(
 
 def get_environment_value(environment_name: str, default_value):
     """
-    Get an environment variable from .env or system and convert it
-    to the same type as default_value.
+    Get an environment variable from .env or system and convert it to the same type as default_value
+    
+    Args:
+        environment_name: The name of the environment variable
+        default_value: The default value to return if the environment variable is not set
+    Returns:
+        The value of the environment variable converted to the same type as default_value
+    Raises:
+        Exception: If the environment variable cannot be converted to the same type as default_value
     """
+    # Get raw value
     raw_value = os.getenv(environment_name)
 
     # If not found, return default
@@ -72,7 +83,6 @@ def get_environment_value(environment_name: str, default_value):
 
         else:
             # Optional: try to eval or JSON parse for custom types
-            import json
             try:
                 return json.loads(raw_value)
             except Exception:
