@@ -9,11 +9,17 @@ load_dotenv()
 
 from utils import get_environment_value
 
-PARALLEL_UPLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 4)
-# Telegram max files per album
-ALBUM_FILES = 10
-# Number of retries for upload
-RETRIES = 3
+### Required Telegram Configurations
+# Telegram channel name where to upload the files
+CHANNEL_NAME = get_environment_value('TELEGRAM_UPLOAD_CHANNEL_NAME', '')
+# Telegram API ID and Hash
+API_ID = get_environment_value('TELEGRAM_UPLOAD_API_ID', -1)
+# Telegram API Hash
+API_HASH = get_environment_value('TELEGRAM_UPLOAD_API_HASH', '')
+
+### Optional Telegram Configurations
+# Number of parallel upload blocks
+PARALLEL_UPLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 1)
 # Max number of retries for reconnect
 MAX_RECONNECT_RETRIES = get_environment_value('TELEGRAM_UPLOAD_MAX_RECONNECT_RETRIES', 5)
 # Reconnect timeout
@@ -21,16 +27,49 @@ RECONNECT_TIMEOUT = get_environment_value('TELEGRAM_UPLOAD_RECONNECT_TIMEOUT', 5
 # Time to wait before retry to connect
 MIN_RECONNECT_WAIT = get_environment_value('TELEGRAM_UPLOAD_MIN_RECONNECT_WAIT', 5)
 
-CHANNEL_NAME = get_environment_value('TELEGRAM_UPLOAD_CHANNEL_NAME', 'Telegram-UI-Database')
-API_ID = get_environment_value('TELEGRAM_UPLOAD_API_ID', 123456)
-API_HASH = get_environment_value('TELEGRAM_UPLOAD_API_HASH', 'your_api_hash_here')
+# I decided to write those values in the env file and other fixed Telegram constants here as constants because
+# the Telegram constants are not going to change often, while the env values can be changed by the user if needed
+
+# -------------------------------------
+# Constants
+# Fixed constants used in the code
+# -------------------------------------
+
+### Compression Constants
+
+# FFMPEG Executable
+FFMPEG_RELATIVE_PATH = "ffmpeg/ffmpeg.exe"
+# FFPROBE Executable
+FFPROBE_RELATIVE_PATH = "ffmpeg/ffprobe.exe"
+
+### UI Constants
+
+# Folder icon path
+ICON_FOLDER_PATH = "icons/folder.png"
+# File icon path
+ICON_FILE_PATH = "icons/file.png"
 
 # -------------------------------------
 # Versions
 # I put versions here to be able to handle changes in the future
+# Example: If I change the caption format, I can increase the version and handle both versions in the code
 # -------------------------------------
 
-# Version of the caption
+"""
+Schema explanation:
+
+Caption:
+{
+    "Version": FILE_CAPTION_VERSION,
+    "Type": FileMessageType.ROOT.value,
+    "Name": file_name,
+    "Children": []
+}
+"""
+
+### Current Versions
+
+# This is the version of the file message caption
 FILE_CAPTION_VERSION = 1
 # Version of the full description
 FILE_FULL_DESCRIPTION_VERSION = 1
@@ -47,12 +86,23 @@ FILE_PART_CAPTION_VERSION = 1
 # Telegram limits and constants
 # -------------------------------------
 
+# Max bot file size
 BOT_USER_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+# Max user file size
 USER_MAX_FILE_SIZE = 2 * 1000 * 1024 * 1024  # 2000MB
-LRV_MAX_FILE_SIZE = 500 * 1024 * 1024  # 500GB
-#USER_MAX_FILE_SIZE = 52428800  # 50MB
+#USER_MAX_FILE_SIZE = 52428800  # 50MB, for testing
+# Max low resolution file size
+LRV_MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
+# Max premium user file size
 PREMIUM_USER_MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024  # 4GB
+# Max part file size in KB
+PART_MAX_SIZE = 512 * 1024  # 512KB
+# Small file threshold
+SMALL_FILE_THRESHOLD = 10 * 1024 * 1024  # 10MB
+
+# Max caption length
 USER_MAX_CAPTION_LENGTH = 1024
+# Max premium user caption length
 PREMIUM_USER_MAX_CAPTION_LENGTH = 2 * 1024
 # Telegram max files per album
 ALBUM_FILES = 10
@@ -65,11 +115,14 @@ RETRIES = 3
 # TODO Maybe move to env
 # -------------------------------------
 
-def prompt_config(
-    config_file : str
-    ):
+def prompt_config(config_file : str) -> str:
     """
     Create the file in the directory and write the API config
+    
+    Args:
+        config_file: Path to the config file
+    Returns:
+        The config file path
     """
     # Create the dir
     os.makedirs(os.path.dirname(config_file), exist_ok=True)

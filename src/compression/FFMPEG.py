@@ -13,23 +13,33 @@ import click
 from typing import TYPE_CHECKING
 
 import requests
-if TYPE_CHECKING:
-    from video import Video
 
-# FFMPEG
-FFMPEG_NAME = "ffmpeg.exe"
-FFMPEG_PATH_JSON = "ffmpegPath"
-# FFPROBE
-FFPROBE_NAME = "ffprobe.exe"
-FFPROBE_PATH_JSON = "ffprobePath"
+# Import constants from config
+from config import FFMPEG_RELATIVE_PATH, FFPROBE_RELATIVE_PATH
+
+if TYPE_CHECKING:
+    from file_types.video import Video
 
 class FFMPEG():
+    """
+    FFMPEG class for handle ffmpeg and ffprobe commands
+    """
+    
     @staticmethod
     def ensure_ffmpeg():
-        ffmpeg_dir = "ffmpeg"
-        if not os.path.exists(os.path.join(ffmpeg_dir, "ffmpeg.exe")):
+        """
+        Ensure ffmpeg is installed, if not download and install it
+        
+        Raises:
+            FileNotFoundError: If ffmpeg could not be found or installed
+        
+        TODO I can add a simple file version check to see if ffmpeg is up to date
+        """
+        # Check if ffmpeg folder exists
+        if not os.path.exists(FFMPEG_RELATIVE_PATH):
+            # Download and install ffmpeg
             print("Downloading ffmpeg...")
-            os.makedirs(ffmpeg_dir, exist_ok=True)
+            os.makedirs(os.path.dirname(FFMPEG_RELATIVE_PATH), exist_ok=True)
 
             # Download zip
             url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
@@ -54,7 +64,7 @@ class FFMPEG():
 
             # Move binaries to 'ffmpeg' folder
             for exe in ["ffmpeg.exe", "ffprobe.exe", "ffplay.exe"]:
-                shutil.move(os.path.join(bin_folder, exe), os.path.join(ffmpeg_dir, exe))
+                shutil.move(os.path.join(bin_folder, exe), os.path.join(os.path.dirname(FFMPEG_RELATIVE_PATH), exe))
 
             # Cleanup
             shutil.rmtree("ffmpeg_temp")
@@ -63,14 +73,16 @@ class FFMPEG():
             print("ffmpeg installed successfully.")
         
     @classmethod
-    def __get_command_path(
-        self, 
-        exe_path_json : str, 
-        exe_name : str
-        ):
+    def __get_command_path(self, exe_path_json : str, exe_name : str) -> str:
         """
-            Function for get the exe path
-            This is designed to be used for find the ffmpeg and ffprobe file
+        Function for get the exe path
+        This is designed to be used for find the ffmpeg and ffprobe file
+            
+        Args:
+            exe_path_json: The environment variable name where the path is stored
+            exe_name: The executable name to search
+        Returns:
+            str: The path of the executable
         """
         resultPath = None
         
@@ -91,68 +103,73 @@ class FFMPEG():
                 # Re-ask
                 self.__get_command_path(exe_path_json, exe_name)
 
-            # Save the path on the enviroment variables
+            # Save the path on the environment variables
             os.environ[exe_path_json] = resultPath
         
         # Return the result path
         return resultPath
 
     @classmethod
-    def call_ffmpeg(
-        self, 
-        args : List[str]
-        ):
+    def call_ffmpeg(self, args : List[str]):
         """
-            Function for execute a ffmpeg command
+        Function for execute a ffmpeg command
+        
+        Args:
+            args: The ffmpeg arguments
+        Returns:
+            subprocess.Popen: The ffmpeg process
+        Raises:
+            Exception: If ffmpeg command is not available
         """
         try:
-            ffmpegScript = [self.__get_command_path(FFMPEG_PATH_JSON, FFMPEG_NAME)] + args
+            ffmpegScript = [self.__get_command_path("FFMPEG", FFMPEG_RELATIVE_PATH)] + args
             return subprocess.Popen(ffmpegScript, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         except FileNotFoundError:
             raise Exception('ffmpeg command is not available. Thumbnails for videos are not available!')
     
     @classmethod
-    def call_ffprobe(
-        self, 
-        args : List[str]
-        ):
+    def call_ffprobe(self, args : List[str]):
         """
-            Function for execute a ffprobe command
+        Function for execute a ffprobe command
+        
+        Args:
+            args: The ffprobe arguments
+        Returns:
+            subprocess.Popen: The ffprobe process
+        Raises:
+            Exception: If ffprobe command is not available
         """
         try:
-            ffprobeScript = [self.__get_command_path(FFPROBE_PATH_JSON, FFPROBE_NAME)] + args
+            ffprobeScript = [self.__get_command_path("FFPROBE", FFPROBE_RELATIVE_PATH)] + args
             return subprocess.Popen(ffprobeScript, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except FileNotFoundError:
             raise Exception('ffprobe command is not available. Thumbnails for videos are not available!')
 
     @classmethod
-    def get_ffprobe_file_details(
-        self, 
-        file : 'Video'
-        ):
+    def get_ffprobe_file_details(self, video : 'Video'):
         """
-            Get the file details using ffprobe
+        Get the file details using ffprobe
+        
+        NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
+        a string for the type hint
 
-            Args:
-                file (Video): _description_
-
-            Returns:
-                _type_: _description_
+        Args:
+            video: The video file
+        Returns:
+            dict: The details of the file
         """
         # ffprobe call for get the file info as json
         p = self.call_ffprobe([
             '-print_format', 'json',
             '-show_format',
             '-show_streams',
-            file.path
+            video.path
         ])
         jsonResult = json.loads(p.communicate()[0].decode('utf-8'))
-        
-        # DEBUG print(jsonResult)
 
         # Format the result
         streams = []
-        # Save the informations i need
+        # Save the information i need
         for s in jsonResult['streams']:
             stream = {}
             stream["index"] = s['index']
@@ -233,20 +250,28 @@ class FFMPEG():
         return result
     
     @classmethod
-    def ffmpeg_progress_bar(
-        self, 
-        file : 'Video', 
-        process, 
-        tot_n_frames : int
-        ):
+    def ffmpeg_progress_bar(self, video : 'Video', process, tot_n_frames : int):
         """
-            Create the ffmpeg progress bar
+        Create the ffmpeg progress bar
 
-            This is different from the normal progress bar as i use a thread for read the value from the process
+        This is different from the normal progress bar as i use a thread for read the value from the process
+            
+        NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
+        a string for the type hint
+        
+        Args:
+            video: The video file
+            process: The ffmpeg process
+            tot_n_frames: The total number of frames        
         """
+        
         def progress_reader(procs, q):
             """
             Read the ffmpeg output frame number and save it
+            
+            Args:
+                procs: The ffmpeg process
+                q: The queue to store the frame number
             """
             while True:
                 if procs.poll() is not None:
@@ -267,19 +292,33 @@ class FFMPEG():
                     # Store the last sample
                     q[0] = frame
 
-        def progress_bar_execution(action, file, p, q, tot_n_frames : int, update_time_s = 1):
+        def progress_bar_execution(action, video : 'Video', p, q, tot_n_frames : int, update_time_s : float = 1):
             """
-            Execute the ffpeg progress bar that update every 1s
+            Execute the ffmpeg progress bar that update every 1s
+            
+            NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
+            a string for the type hint
+            
+            Args:
+                action: The action name
+                video: The video file
+                p: The ffmpeg process
+                q: The queue to store the frame number
+                tot_n_frames: The total number of frames
+                update_time_s: The update time in seconds
             """
-            bar = click.progressbar(label='{} "{}"'.format(action, file.file_name), length=tot_n_frames)
+            # Create the progress bar
+            bar = click.progressbar(label='{} "{}"'.format(action, video.file_name), length=tot_n_frames)
             last_current = c_int64(0)
             while True:
                 if p.poll() is not None:
                     break  # Break if FFmpeg sun-process is closed
-
-                time.sleep(update_time_s)  # Sleep 1 second (do some work...)
-
-                n_frame = q[0]  # Read last element from progress_reader - current encoded frame
+                
+                # Wait for the update time
+                time.sleep(update_time_s)
+                
+                # Read last element from progress_reader - current encoded frame
+                n_frame = q[0]
                 if n_frame < last_current.value:
                     return
                 bar.pos = 0
@@ -294,20 +333,21 @@ class FFMPEG():
         progress_reader_thread = Thread(target=progress_reader, args=(process, q))
         # Start the thread
         progress_reader_thread.start()
-
-        progress_bar_execution("Compressing video", file, process, q, tot_n_frames)
+        
+        # Execute the progress bar
+        progress_bar_execution("Compressing video", video, process, q, tot_n_frames)
     
-    def get_video_resolution(
-        video : 'Video'
-        ):
+    def get_video_resolution(video : 'Video'):
         """
-            Get the video resolution using ffprobe
-
-            Args:
-                video (Video): _description_
-
-            Returns:
-                _type_: _description_
+        Get the video resolution using ffprobe
+            
+        NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
+        a string for the type hint
+        
+        Args:
+            video: The video file
+        Returns:
+            List[int]: The video resolution [width, height]
         """
         
         p = FFMPEG.call_ffmpeg([

@@ -1,0 +1,1 @@
+This folder contains the code to execute operations with Telegram API

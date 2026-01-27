@@ -13,12 +13,12 @@ from telethon.errors import InvalidBufferError
 from telethon.tl.types import DocumentAttributeVideo
 from telethon.tl.types import InputMessagesFilterPinned
 
-from config import MAX_RECONNECT_RETRIES, MIN_RECONNECT_WAIT, PARALLEL_UPLOAD_BLOCKS, RECONNECT_TIMEOUT
+from config import MAX_RECONNECT_RETRIES, MIN_RECONNECT_WAIT, PARALLEL_UPLOAD_BLOCKS, PART_MAX_SIZE, RECONNECT_TIMEOUT, SMALL_FILE_THRESHOLD
 from dbJson.file_message import FileMessage, FileMessageType
 from telegram.telegram_manager_client import TelegramManagerClient
 
-from file_types.compression.FFMPEG import FFMPEG
-from file_types.compression.LRV import LRV
+from compression.FFMPEG import FFMPEG
+from file_types.LRV import LRV
 from file_types.file import File
 from file_types.video import Video
 
@@ -27,15 +27,20 @@ class FileManager():
     Class to work with Telegram messages as files and folders
     """
     
-    # region Utils
-    async def __send_telegram_message(
-        client : TelegramManagerClient, 
-        target_chat_instance: Entity, 
-        message_json : dict[str, any],
-        ) -> FileMessage:
+    async def __send_telegram_message(client : TelegramManagerClient, target_chat_instance: Entity, message_json : dict[str, any]) -> FileMessage:
         """
-            Function to send a message to Telegram
+        Send a telegram message with a JSON content
+        
+        Args:
+            client: The telegram client to use
+            target_chat_instance: The chat to send the message to
+            message_json: The JSON content of the message
+        Returns:
+            FileMessage: The sent message wrapped in a FileMessage object
+        Raises:
+            TypeError: If the message_json is not a dict
         """
+        # Validate input
         if not isinstance(message_json, dict):
             raise TypeError(
                 f"__send_telegram_message expects a JSON dict, got {type(message_json).__name__}"
@@ -49,56 +54,29 @@ class FileManager():
             entity=target_chat_instance, 
             message=json_text
         )
-
+        
+        # Wrap in FileMessage
         return FileMessage(telegram_message)
 
-    def __calculate_message_link(
-        chat : Entity, 
-        message : FileMessage
-        ) -> str:
+    async def __reconnect(self, client : TelegramManagerClient, reconnecting_lock : asyncio.Lock, upload_semaphore : asyncio.Semaphore):
         """
-            Calculate the link to a message in a channel or group.
-
-            Args:
-                chat (Entity): _description_
-                message (FileMessage): _description_
-
-            Returns:
-                _type_: _description_
-        """
-        if message == None or message.telegram_message == None:
-            return ""
+        Reconnects to Telegram servers
         
-        if hasattr(chat, 'username') and chat.username:
-            # Public channel/group
-            link = f"https://t.me/{chat.username}/{message.telegram_message.id}"
-        else:
-            # Private channel/group
+        This function is used to reconnect to Telegram servers when the connection is lost
+        It uses a lock to prevent multiple reconnection at the same time
             
-            # remove -100 prefix
-            internal_id = str(chat.id).replace('-100', '')
-            link = f"https://t.me/c/{internal_id}/{message.telegram_message.id}"
-        
-        return link
-
-    async def __reconnect(
-        self, 
-        client : TelegramManagerClient, 
-        reconnecting_lock : asyncio.Lock, 
-        upload_semaphore : asyncio.Semaphore
-        ):
-        """
-            Reconnects to Telegram servers
-            This function is used to reconnect to Telegram servers when the connection is lost
-            It uses a lock to prevent multiple reconnections at the same time
-            
-            Args:
-                client (TelegramManagerClient): The Telegram client to reconnect
-                reconnecting_lock (asyncio.Lock): A lock to prevent multiple reconnections at the same time
-                upload_semaphore (asyncio.Semaphore): A semaphore to limit the number of parallel uploads
+        Args:
+            client: The Telegram client to reconnect
+            reconnecting_lock: A lock to prevent multiple reconnection at the same time
+            upload_semaphore: A semaphore to limit the number of parallel uploads
+        Raises:
+            Exception: If the reconnection fails
         """
         
+        # Acquire the lock
         await reconnecting_lock.acquire()
+        
+        # Check if the client is already connected
         if client.is_connected():
             # Reconnected in another task
             reconnecting_lock.release()
@@ -110,6 +88,7 @@ class FileManager():
             client.loop.create_task(upload_semaphore.acquire())
             
         try:
+            # Reconnect to Telegram servers
             click.echo('Reconnecting to Telegram servers...')
             await asyncio.wait_for(client.connect(), RECONNECT_TIMEOUT)
             click.echo('Reconnected to Telegram servers.')
@@ -120,15 +99,18 @@ class FileManager():
         finally:
             reconnecting_lock.release()
             
-    def __progress(
-        sent : int, 
-        total : int
-        ):
+    def __progress(sent : int, total : int):
         """
-            Callback function to show the upload progress
+        Callback function to show the upload progress
+        
+        Args:
+            sent: The number of bytes sent
+            total: The total number of bytes to send
         """
         print(f"Uploaded {sent / total * 100:.2f}%")
-    #endregion
+    
+    
+    
     
     # region Actions
     
@@ -139,52 +121,50 @@ class FileManager():
     '''
     
     @classmethod
-    async def get_root(
-        self, 
-        client : TelegramManagerClient, 
-        chat_instance : Entity
-        ) -> FileMessage:
+    async def get_root(self, client : TelegramManagerClient, chat_instance : Entity) -> FileMessage:
         """
-            Get the root folder of the chat
-            The root folder is the first pinned message in the chat
-
-            Args:
-                client (TelegramManagerClient): _description_
-                chat_instance (Entity): _description_
-
-            Returns:
-                _type_: _description_
+        Get the root folder of the chat
+        The root folder is the first pinned message in the chat
+        
+        Args:
+            client: The telegram client to use
+            chat_instance: The chat to get the root folder from
+        Returns:
+            FileMessage: The root folder message wrapped in a FileMessage object or None if not found
         """
         
         async for msg in client.iter_messages(chat_instance, filter=InputMessagesFilterPinned()):
             # Get the first pinned message
             return FileMessage(msg)
+        
         return None
     
     @classmethod
-    async def create_root(
-        self, 
-        client : TelegramManagerClient, 
-        chat_instance : Entity
-        ) -> FileMessage:
+    async def create_root(self, client : TelegramManagerClient, chat_instance : Entity) -> FileMessage:
         """
-            Create the root folder in the chat
-
-            Args:
-                client (TelegramManagerClient): _description_
-                chat_instance (Entity): _description_
-
-            Returns:
-                FileMessage: _description_
-        """
+        Create the root folder in the chat
         
-        root_message = await self.__send_telegram_message(
-            client, 
-            chat_instance, 
-            FileMessage.generate_json_caption(FileMessageType.ROOT, "ROOT"),
-        )
-        await client.pin_message(chat_instance, root_message.telegram_message)
-        return root_message
+        Args:
+            client: The telegram client to use
+            chat_instance: The chat to create the root folder in
+        Returns:
+            FileMessage: The root folder message wrapped in a FileMessage object
+        Raises:
+            Exception: If the root folder creation fails
+        """
+        try:
+            # Create the root folder message
+            root_message = await self.__send_telegram_message(
+                client, 
+                chat_instance, 
+                FileMessage.generate_json_caption(FileMessageType.ROOT, "ROOT"),
+            )
+            # Pin the root folder message
+            await client.pin_message(chat_instance, root_message.telegram_message)
+            # Return the root folder message
+            return root_message
+        except Exception as e:
+            raise e
     
     @classmethod
     async def create_folder(
@@ -196,21 +176,24 @@ class FileManager():
         ) -> FileMessage:
         """
         Create a new folder
-
+        
         Args:
-            client (TelegramClient): _description_
-            chat_instance (Entity): _description_
-            folder_name (str): _description_
-            parent_message (Message, optional): _description_. Defaults to None.
-
+            client: The Telegram client
+            chat_instance: The chat to create the folder in
+            folder_name: The name of the new folder
+            parent_message: The parent folder message
         Returns:
-            _type_: _description_
+            FileMessage: The created folder message wrapped in a FileMessage object
         """
+        # Request parent message update
         await parent_message.refresh(client, chat_instance)
         
+        # Create the folder message
         data = FileMessage.generate_json_caption(FileMessageType.FOLDER, folder_name)
-        data["Parent"] = self.__calculate_message_link(chat_instance, parent_message)
+        # Set the parent
+        data["Parent"] = FileMessage.calculate_message_link(chat_instance, parent_message)
         
+        # Send the folder message
         folder_message = await self.__send_telegram_message(
             client, 
             chat_instance,
@@ -218,8 +201,9 @@ class FileManager():
         )
         
         # Update parent message children
-        await parent_message.add_children(client, chat_instance, self.__calculate_message_link(chat_instance, folder_message))
-            
+        await parent_message.add_children(client, chat_instance, FileMessage.calculate_message_link(chat_instance, folder_message))
+        
+        # Return the created folder message
         return folder_message
     
     @classmethod
@@ -231,36 +215,36 @@ class FileManager():
         parent_message : FileMessage
         ) -> FileMessage:
         """
-        Create a new file
-
+        Upload a file to the chat under the specified parent folder
+        
         Args:
-            client (TelegramClient): _description_
-            chat_instance (Entity): _description_
-            file_name (str): _description_
-            parent_message (Message, optional): _description_. Defaults to None.
-            file_path (_type_, optional): _description_. Defaults to str.
-
-        Raises:
-            Exception: _description_
-
+            client: The Telegram client
+            chat_instance: The chat to upload the file to
+            file: The file to upload
+            parent_message: The parent folder message
         Returns:
-            _type_: _description_
+            FileMessage: The uploaded file message wrapped in a FileMessage object
+        Raises:
+            Exception: If the parent is not a folder
         """
         
-        if not parent_message:
-            json_data = json.loads(parent_message.telegram_message.message)
-            type_value = json_data.get("Type")
-            
-            if type_value != FileMessageType.FOLDER.value and type_value != FileMessageType.ROOT.value:
-                raise Exception("The parent is not a folder")
+        # Check if the parent message is a folder
+        json_data = json.loads(parent_message.telegram_message.message)
+        type_value = json_data.get("Type")
         
-            # Update
-            await parent_message.refresh(client, chat_instance)
-            
-            
+        # Validate type
+        if type_value != FileMessageType.FOLDER.value and type_value != FileMessageType.ROOT.value:
+            # Raise and exception if the parent is not a folder as only a folder can contain files
+            raise Exception("The parent is not a folder")
+        
+        # Update
+        await parent_message.refresh(client, chat_instance)
+        
+        # Create the file message
         data = FileMessage.generate_json_caption(FileMessageType.FILE, file.file_name)
-        data["Parent"] = self.__calculate_message_link(chat_instance, parent_message)
-        
+        # Set the parent
+        data["Parent"] = FileMessage.calculate_message_link(chat_instance, parent_message)
+        # Send the file message
         message = await self.__send_telegram_message(
             client, 
             chat_instance, 
@@ -275,17 +259,23 @@ class FileManager():
                 'Remote document size: {} bytes (local file size: {} bytes)'.format(
                     message.media.document.size, file.size))
         '''
-    
+        
+        # Get the file mime type
         mime = file.get_mime()
+        
+        # Handle the file upload based on the mime type
         match(mime):
             case "video":
+                # Upload video file
                 await self.__create_video(client, chat_instance, Video(file), message)
             case _:
+                # Upload generic file
                 await self.__create_generic_file(client, chat_instance, file, message)
             
         # Update parent message children
-        await parent_message.add_children(client, chat_instance, self.__calculate_message_link(chat_instance, message))
+        await parent_message.add_children(client, chat_instance, FileMessage.calculate_message_link(chat_instance, message))
         
+        # Return the uploaded file message
         return message
     
     '''
@@ -334,69 +324,69 @@ class FileManager():
     '''
     
     @classmethod
-    async def rename(
-        self, 
-        client : TelegramClient, 
-        chat_instance : Entity, 
-        message : FileMessage, 
-        new_name : str
-        ):
+    async def rename(self, client : TelegramClient, chat_instance : Entity, message : FileMessage, new_name : str):
         """
         Rename a file or a folder
-
+        
         Args:
-            client (TelegramClient): _description_
-            chat_instance (Entity): _description_
-            message (Message): _description_
-            new_name (str): _description_
+            client: The Telegram client
+            chat_instance: The chat instance
+            message: The file or folder message to rename
+            new_name: The new name for the file or folder
         """
         # Update
         await message.refresh(client, chat_instance)
         
+        # Parse the message data
         json_message_data = json.loads(message.telegram_message.message)
+        # Update the name
         json_message_data['Name'] = new_name
+        # Generate the new message JSON
         json_new_message = json.dumps(json_message_data, indent=4)
+        
+        # Edit the message
         await client.edit_message(chat_instance, message.telegram_message, json_new_message)
 
     @classmethod
-    async def delete(
-        self, 
-        client : TelegramClient, 
-        chat_instance : Entity, 
-        message : FileMessage
-        ):
+    async def delete(self, client : TelegramClient, chat_instance : Entity, message : FileMessage):
         """
         Delete a file or a folder
-
+        
         Args:
-            client (TelegramClient): _description_
-            chat_instance (Entity): _description_
-            message (Message): _description_
-
-        Raises:
-            Exception: _description_
+            client: The Telegram client
+            chat_instance: The chat instance
+            message: The file or folder message to delete
         """
         # Update
         await message.refresh(client, chat_instance)
         
+        # Parse the message data
         json_message_data = json.loads(message.telegram_message.message)
-        deleted_message_link = self.__calculate_message_link(chat_instance, message)
+        # Calculate the message link
+        deleted_message_link = FileMessage.calculate_message_link(chat_instance, message)
         
         # Check if file or folder
         match json_message_data['Type']:
             case FileMessageType.FOLDER.value:
-                # Remove all the childrens
+                # Remove all the children
                 for c in json_message_data["Children"]:
-                    await self.delete(client, chat_instance, await FileMessage.get_filemessage_from_link(client, c))
+                    # Recursively delete children
+                    await self.delete(client, chat_instance, await FileMessage.get_FileMessage_from_link(client, c))
                 
+                # Delete the folder message
                 await client.delete_messages(chat_instance, message.telegram_message.id)
             case FileMessageType.FILE.value:
+                # Delete the file message
                 await client.delete_messages(chat_instance, message.telegram_message.id)
+            case FileMessageType.ROOT.value:
+                raise Exception("Cannot delete root folder")
+            case FileMessageType.LRV.value:
+                raise Exception("Cannot delete LRV file directly")
             case _:
                 raise Exception("Not implemented")
         
-        # Remove from the children of parent
-        parent_message = await FileMessage.get_filemessage_from_link(client, json_message_data['Parent'])
+        # Remove the message from the parent's children
+        parent_message = await FileMessage.get_FileMessage_from_link(client, json_message_data['Parent'])
         await parent_message.remove_children(client, chat_instance, deleted_message_link)
     
     # endregion
@@ -404,7 +394,7 @@ class FileManager():
     
     # region Upload
     '''
-    Upload functios
+    Upload functions
     '''
     
     # region UploadVideo
@@ -416,26 +406,29 @@ class FileManager():
     '''
     
     @classmethod
-    async def __create_video(
-        self, 
-        client : TelegramManagerClient, 
-        chat_instance : Entity, 
-        file : Video, 
-        message : FileMessage
-        ):
+    async def __create_video(self, client : TelegramManagerClient, chat_instance : Entity, file : Video, message : FileMessage):
+        ### LRV
+        
         # Generate the LRV video
         LRV_video = LRV.generate_video_low_resolution(file)
-
-        # Post the video as a comment of the message
-        await self.__process_normal_video(client, chat_instance, LRV_video, caption = LRV_file_caption, comment_to = message, force_document = False, supports_streaming = True)
         
-        file_caption = {
-            #"Parent": calculate_message_link(chat_instance, file_message),
-        }
-        # Check if the fiel size is bigger then the max allowed size for the user
+        # File caption for LRV
+        file_caption_lrv = FileMessage.generate_json_caption(FileMessageType.LRV, file.file_name)
+        
+        # Post the LRV video
+        await self.__process_normal_video(client, chat_instance, LRV_video, caption = file_caption_lrv, comment_to = message, force_document = False, supports_streaming = True)
+        
+        ### Original video
+        
+        # File caption for the original video
+        file_caption = FileMessage.generate_json_caption(FileMessageType.FILE, file.file_name)
+        
+        # Check if the file size is bigger then the max allowed size for the user
         if file.size > client.max_file_size:
+            # Process as large video
             await self.__process_large_video(client, chat_instance, file, caption = file_caption, comment_to = message)
         else:
+            # Process as normal video
             await self.__process_normal_video(client, chat_instance, file, caption = file_caption, comment_to = message, force_document = True)
     
     @classmethod    
@@ -451,20 +444,39 @@ class FileManager():
         ):
         """
         File is normal file
+        
+        Args:
+            client: Telegram manager client
+            chat_entity: Chat entity to send the file to
+            file: Video file to upload
+            caption: Caption for the file
+            comment_to: FileMessage to comment the file to
+            force_document: Whether to force the file to be sent as a document
+            supports_streaming: Whether the video supports streaming
         """
+        
         # Add the part number
         caption["Part"] = 1
         
+        # Get video details
         json_video_info = FFMPEG.get_ffprobe_file_details(file)
+        # Convert caption to JSON string
         json_file_message = json.dumps(caption, indent=4)
+        
+        # Upload the file data
+        # This is done before send the message with the file to have the file already uploaded when sending the message
         file = await self.__upload_file(client, file, file_output_size = file.size, file_output_path = file.path, progress_callback=self.__progress)
+        
+        # Send the file message
         await client.send_file(
             chat_entity, 
             file, 
-            comment_to = comment_to, 
+            comment_to = comment_to.telegram_message, 
             caption = json_file_message, 
             force_document = force_document, 
             supports_streaming = supports_streaming,
+            # Add video attributes
+            # This is needed to have the video playable in Telegram
             attributes = [
                 DocumentAttributeVideo(
                     duration = float(json_video_info["streams"][0]["duration"]),
@@ -485,10 +497,18 @@ class FileManager():
         comment_to : FileMessage
         ):
         """
-        Override the process_large_file base function
+        Process large video file by splitting it into parts and uploading each part separately
+        
+        Args:
+            client: Telegram manager client
+            chat_entity: Chat entity to send the file to
+            file: Video file to upload
+            caption: Caption for the file
+            comment_to: FileMessage to comment the file to
         """
-        # Calculate how many parts i need
+        # Calculate how many parts are needed
         parts = math.ceil(file.size / client.max_file_size)
+        # Calculate the zfill for part numbering (e.g., 001, 002, etc.)
         zfill = int(math.log10(10)) + 1
 
         # Loop every part
@@ -503,23 +523,32 @@ class FileManager():
             
             # Add the part to the caption
             caption["Part"] = part + 1
+            # Convert caption to JSON string
             json_file_message = json.dumps(caption, indent=4)
             # Send the file
-            await client.send_file(chat_entity, splitted_file, comment_to = comment_to, caption = json_file_message, force_document = True)
+            await client.send_file(chat_entity, splitted_file, comment_to = comment_to.telegram_message, caption = json_file_message, force_document = True)
             # Get the next part
             file.seek(client.max_file_size * part, split_seek=True)
     
     # endregion
     
-        # region UploadGenericFile
+    # region UploadGenericFile
+    
     @classmethod
-    async def __create_generic_file(
-        self, 
-        client : TelegramManagerClient, 
-        chat_instance : Entity, 
-        file : File, 
-        message : FileMessage
-        ):
+    async def __create_generic_file(self, client : TelegramManagerClient, chat_instance : Entity, file : File, message : FileMessage):
+        """
+        Upload a generic file to Telegram as a comment to the specified message
+        
+        Args:
+            client: Telegram manager client
+            chat_instance: Chat entity to send the file to
+            file: File to upload
+            message: FileMessage to comment the file to
+        """
+        
+        # File caption for the original video
+        file_caption = FileMessage.generate_json_caption(FileMessageType.FILE, file.file_name)
+        json_file_message = json.dumps(file_caption, indent=4)
         
         # Upload the file data
         file = await self.__upload_file(client, file, file_output_size = file.size, file_output_path = file.path, progress_callback=self.__progress)
@@ -527,16 +556,16 @@ class FileManager():
         await client.send_file(
             chat_instance, 
             file,
-            # Add the image to the comment
+            # Add the file to the comment
             comment_to = message.telegram_message,
-            # TODO
-            caption = "", 
+            caption = json_file_message, 
             force_document = True,
         )
         
     # endregion
     
     # region UploadUtils
+    
     @classmethod
     async def __upload_file(
         self, 
@@ -548,32 +577,60 @@ class FileManager():
         file_output_path: str = None,
         progress_callback: 'hints.ProgressCallback' = None
         ):
+        """
+        Upload a file to Telegram servers in parts
         
+        All the information of this process can be found at:
+        https://core.telegram.org/api/files
+        
+        Args:
+            client: Telegram manager client
+            file: File to upload
+            part_size_kb: Size of each part in KB. If None, an appropriate size will be determined
+            file_output_size: Total size of the file to upload. If None, the size will be determined from the file
+            file_output_path: Path of the file to upload. If None, the file name will be used
+            progress_callback: Callback to use to show upload progress. Optional.
+        Returns:
+            InputFile or InputFileBig: The uploaded file as an InputFile or InputFileBig
+        Raises:
+            ValueError: If the part size is greater than the maximum allowed size
+            ValueError: If the part size is not evenly divisible by 1024
+            ValueError: If PART_MAX_SIZE is not evenly divisible by the part size
+            TypeError: If the file descriptor does not return bytes when read
+            Exception: If the upload fails after the maximum number of retries
+        """
+        
+        # Semaphore to limit the number of parallel uploads
         upload_semaphore = asyncio.Semaphore(PARALLEL_UPLOAD_BLOCKS)
         reconnecting_lock = asyncio.Lock()
         
+        # Check if the file is already an InputFile
         if isinstance(file, (types.InputFile, types.InputFileBig)):
             return file  # Already uploaded
         
+        # Open the file stream
         async with helpers._FileStream(file.path, file_size=file_output_size) as stream:
-            # Opening the stream will determine the correct file size
+            # Determine the file size
             file_size = file_output_size
             
             # Check if part_size_kb is a valid value
             if not part_size_kb:
                 part_size_kb = utils.get_appropriated_part_size(file_size)
-
-            if part_size_kb > 512:
+                
+            # Validate part size
+            if part_size_kb > (PART_MAX_SIZE / 1024):
                 raise ValueError('The part size must be less or equal to 512KB')
-
+            
+            # Calculate part size in bytes
             part_size = int(part_size_kb * 1024)
             if part_size % 1024 != 0:
                 raise ValueError(
                     'The part size must be evenly divisible by 1024')
-
-            if 524288 % part_size != 0:
+            
+            # Validate that PART_MAX_SIZE is evenly divisible by part_size
+            if PART_MAX_SIZE % part_size != 0:
                 raise ValueError(
-                    '524288 must be evenly divisible by the part size')
+                    f'{PART_MAX_SIZE} must be evenly divisible by the part size')
             
             # Generate a file id
             file_id = helpers.generate_random_long()
@@ -583,25 +640,27 @@ class FileManager():
                 file_output_path = stream.name or str(file_id)
 
             # If the file name lacks extension, add it if possible.
-            # Else Telegram complains with `PHOTO_EXT_INVALID_ERROR`
+            # Otherwise Telegram gives the error `PHOTO_EXT_INVALID_ERROR`
             # even if the uploaded image is indeed a photo.
             if not os.path.splitext(file_output_path)[-1]:
                 file_output_path += utils._get_extension(stream)
 
             # Determine whether the file is too big (over 10MB) or not
-            # Telegram does make a distinction between smaller or larger files
-            is_big = file_size > 10 * 1024 * 1024
+            # Telegram does make a distinction between big and small files
+            # when uploading them.
+            is_big = file_size > SMALL_FILE_THRESHOLD
             hash_md5 = hashlib.md5()
-
+            
+            # Calculate the number of parts
             part_count = (file_size + part_size - 1) // part_size
-            #client._log[__name__].info('Uploading file of %d bytes in %d chunks of %d',
-            #                         file_size, part_count, part_size)
 
             pos = 0
+            # Loop every part
             for part_index in range(part_count):
-                # Read the file by in chunks of size part_size
+                # Read the file in chunks of size part_size
                 part = await helpers._maybe_await(stream.read(part_size))
-
+                
+                # Validate the read part
                 if not isinstance(part, bytes):
                     raise TypeError(
                         'file descriptor returned {}, not bytes (you must '
@@ -613,7 +672,8 @@ class FileManager():
                     raise ValueError(
                         'read less than {} before reaching the end; either '
                         '`file_size` or `read` are wrong'.format(part_size))
-
+                    
+                # Update position
                 pos += len(part)
                 
                 if not is_big:
@@ -631,6 +691,7 @@ class FileManager():
                     request = functions.upload.SaveFilePartRequest(
                         file_id, part_index, part)
                 
+                # Acquire the semaphore before starting the upload
                 await upload_semaphore.acquire()
                 client.loop.create_task(
                     self.__send_file_part(client, reconnecting_lock, upload_semaphore, request, part_index, part_count, pos, file_size, progress_callback),
@@ -664,17 +725,25 @@ class FileManager():
         """
         Submit the file request part to Telegram. This method waits for the request to be executed, logs the upload,
         and releases the semaphore to allow further uploading.
-
-        :param request: SaveBigFilePartRequest or SaveFilePartRequest. This request will be awaited.
-        :param part_index: Part index as integer. Used in logging.
-        :param part_count: Total parts count as integer. Used in logging.
-        :param pos: Number of part as integer. Used for progress bar.
-        :param file_size: Total file size. Used for progress bar.
-        :param progress_callback: Callback to use after submit the request. Optional.
-        :return: None
+        
+        Args:
+            client: Telegram manager client
+            reconnecting_lock: A lock to prevent multiple reconnection at the same time
+            upload_semaphore: A semaphore to limit the number of parallel uploads
+            request: The TLRequest to send
+            part_index: Index of the part being uploaded
+            part_count: Total number of parts
+            pos: Current position in the file
+            file_size: Total size of the file
+            progress_callback: Callback to use to show upload progress. Optional.
+            retry: Current retry count
+        Raises:
+            RuntimeError: If the upload fails after the maximum number of retries
         """
+        # Initialize result
         result = None
         try:
+            # Send the request
             result = await client(request)
         except InvalidBufferError as e:
             if e.code == 429:
@@ -686,9 +755,10 @@ class FileManager():
             # Retry to send the file part
             click.echo('Detected connection error. Retrying...', err=True)
         else:
+            # Successful upload
             upload_semaphore.release()
 
-        
+        # Check the result and retry if needed
         if result is None and retry < MAX_RECONNECT_RETRIES:
             # An error occurred, retry
             await asyncio.sleep(max(MIN_RECONNECT_WAIT, retry * MIN_RECONNECT_WAIT))
