@@ -9,6 +9,7 @@ import time
 from typing import List
 import zipfile
 import click
+from file_manager.file_manager_utils import FileManager_Utils
 
 from typing import TYPE_CHECKING
 
@@ -294,38 +295,35 @@ class FFMPEG():
 
         def progress_bar_execution(action, video : 'Video', p, q, tot_n_frames : int, update_time_s : float = 1):
             """
-            Execute the ffmpeg progress bar that update every 1s
-            
-            NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
-            a string for the type hint
-            
-            Args:
-                action: The action name
-                video: The video file
-                p: The ffmpeg process
-                q: The queue to store the frame number
-                tot_n_frames: The total number of frames
-                update_time_s: The update time in seconds
+            Execute the ffmpeg progress loop that updates every `update_time_s` seconds.
+
+            Uses `FileManager_Utils.progress` (GUI if available) to display progress.
+            Falls back to console printing if the GUI is unavailable.
             """
-            # Create the progress bar
-            bar = click.progressbar(label='{} "{}"'.format(action, video.file_name), length=tot_n_frames)
             last_current = c_int64(0)
             while True:
                 if p.poll() is not None:
-                    break  # Break if FFmpeg sun-process is closed
-                
+                    break  # Break if FFmpeg subprocess is closed
+
                 # Wait for the update time
                 time.sleep(update_time_s)
-                
+
                 # Read last element from progress_reader - current encoded frame
                 n_frame = q[0]
                 if n_frame < last_current.value:
                     return
-                bar.pos = 0
-                bar.update(n_frame)
+
                 last_current.value = n_frame
 
-            bar.render_finish()
+                # Try GUI progress first, otherwise fallback to console
+                try:
+                    FileManager_Utils.progress(n_frame, tot_n_frames, f"{action} {video.file_name}")
+                except Exception:
+                    try:
+                        pct = (n_frame / tot_n_frames) * 100 if tot_n_frames else 0.0
+                    except Exception:
+                        pct = 0.0
+                    print(f"{pct:.2f}% {action} {video.file_name}")
 
         q = [0]
 

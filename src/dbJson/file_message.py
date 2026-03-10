@@ -200,6 +200,19 @@ class FileMessage(Message):
         # Return the name without extension
         return split_name[0]
     
+    @property
+    def file_size(self) -> str:
+        """
+        Get the size of the document attached to the message
+        
+        Args:
+            self: Description
+        Returns:
+            str: The size of the document
+        """
+        # Return the size of the document
+        return self.document.size
+    
     async def get_parent(self, client : TelegramManagerClient):
         """
         Get the parent message of the current message
@@ -262,6 +275,29 @@ class FileMessage(Message):
         
         # Return children
         return children_messages_list
+    
+    async def get_children_by_file_name(self, client : TelegramManagerClient, name : str):
+        """
+        Get the children messages of the current message that match a specific file name
+            
+        This could be a property, but I prefer to keep it as a method since it is async
+        
+        Args:
+            self: Description
+            client: Telegram manager client
+            name: The file name to filter children messages by
+        Returns:
+            list[FileMessage]: The list of children messages that match the file name
+        Raises:
+            ValueError: If the message is empty or has no text, or does not contain Children
+        """
+        
+        # Get all children
+        children = await self.get_children(client)
+        
+        # Filter children by name
+        filtered_children = [child for child in children if child.file_name == name]
+        return filtered_children
     
     async def add_children(self, client : TelegramManagerClient, chat_instance : Entity, message_link : str):
         """

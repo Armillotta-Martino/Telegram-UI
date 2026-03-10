@@ -212,3 +212,9 @@ __marimo__/
 
 # Ffmpeg files
 ffmpeg/*
+
+# Exclude samples as they may contain sensitive data and are not needed for the functioning of the application
+samples/*
+
+# Remove the sync_jobs.json file as it may contain sensitive data and is not needed for the functioning of the application
+sync_jobs.json

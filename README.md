@@ -135,6 +135,9 @@ python src/main.py
 - [ ] Be able to handle every type of file
 - [ ] Add the possibility of open a big preview of the file
 
+- [ ] Add a transaction system to undo all the changes if something go wrong
+- [ ] Add the code to clear the folder system if a message has been deleted or has a error
+
 See the [open issues](https://github.com/Armillotta-Martino/Telegram-UI/issues) for a full list of proposed features (and known issues).
 
 <!-- CONTRIBUTING -->

@@ -1,9 +1,11 @@
 import asyncio
+import json
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from xml.dom.minidom import Entity
 
-from file_manager import FileManager
+from dbJson.file_message import FileMessage
+from file_manager.file_manager_main import FileManager
 from compression.FFMPEG import FFMPEG
 from file_types.file import File
 from config import API_ID, API_HASH, CHANNEL_NAME
@@ -42,10 +44,10 @@ async def init():
             dialog_dict[dialog.name] = dialog.entity
     
     # Initial the root of the file browser pane with the chat instance
-    file_browser_pane = FileBrowserPane(root, await __get_chat_instance())
+    file_browser_pane = FileBrowserPane(root, await _get_chat_instance())
     await file_browser_pane.init_root(client)
     
-async def __get_chat_instance():
+async def _get_chat_instance():
     """
     Get the target chat entity instance
     """
@@ -59,11 +61,17 @@ async def __get_chat_instance():
 
 #region Buttons UI Handlers
 
-def __choose_file():
+def _choose_file():
     """
     Open a file dialog to let the user choose a file
     """
     return File(filedialog.askopenfilename())
+
+def _choose_folder():
+    """
+    Open a file dialog to let the user choose a folder
+    """
+    return filedialog.askdirectory()
 
 def create_folder_UI():
     """
@@ -86,14 +94,14 @@ async def _create_folder_UI():
         # Create the folder
         message_instance = await FileManager.create_folder(
             client, 
-            await __get_chat_instance(), 
+            await _get_chat_instance(), 
             pop_up_name.value, 
             file_browser_pane.current_position
         )
         print("Folder created with message ID:", message_instance.telegram_message)
         
         # Refresh current position
-        await file_browser_pane.current_position.refresh(client, await __get_chat_instance())
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
         # Refresh UI
         await file_browser_pane.render_current_folder(client)
     except Exception as e:
@@ -116,20 +124,69 @@ async def _upload_file_UI():
     
     try:
         # Open the file dialog to let the user choose a file
-        selected_file = __choose_file()
-        
+        selected_file = _choose_file()
+    
         # Upload the file
-        message_instance = await FileManager.upload_file(client, await __get_chat_instance(), selected_file, file_browser_pane.current_position)
+        message_instance = await FileManager.upload_file(client, await _get_chat_instance(), selected_file, file_browser_pane.current_position)
         
         print("File uploaded with message ID:", message_instance.telegram_message)
         
         # Refresh current position
-        await file_browser_pane.current_position.refresh(client, await __get_chat_instance())
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
         # Refresh UI
         await file_browser_pane.render_current_folder(client)
     except Exception as e:
         messagebox.showerror("Error", str(e))
         
+def download_file_UI():
+    """
+    Download a file from the selected file in the file browser pane
+
+    This is the UI handler that wraps the async function
+    """
+    loop.create_task(_download_file_UI())
+    return
+async def _download_file_UI():
+    """
+    Download a file from the selected file in the file browser pane
+    """
+    global file_browser_pane
+    global client
+    
+    try:
+        # Download the selected file
+        download_path = await FileManager.download_file(client, await _get_chat_instance(), file_browser_pane.selected)
+        
+        print("File downloaded to:", download_path)
+        
+        # Refresh current position
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
+        # Refresh UI
+        await file_browser_pane.render_current_folder(client)
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+
+def see_preview_UI():
+    """
+    See a preview of the selected file in the file browser pane
+
+    This is the UI handler that wraps the async function
+    """
+    loop.create_task(_see_preview_UI())
+    return
+async def _see_preview_UI():
+    """
+    See a preview of the selected file in the file browser pane
+    """
+    global file_browser_pane
+    global client
+    
+    try:
+        # TODO
+        pass
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+       
 def back_UI():
     """
     Go back to the previous folder in the file browser pane
@@ -173,12 +230,12 @@ async def _rename_UI():
         pop_up_name = PopUpTextInput(root, file_browser_pane.selected.short_name)
         
         # Rename the file
-        await FileManager.rename(client, await __get_chat_instance(), file_browser_pane.selected, pop_up_name.value + file_browser_pane.selected.extension)
+        await FileManager.rename(client, await _get_chat_instance(), file_browser_pane.selected, pop_up_name.value + "." +file_browser_pane.selected.extension)
         
         print("File renamed")
         
         # Refresh current position
-        await file_browser_pane.current_position.refresh(client, await __get_chat_instance())
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
         # Refresh UI
         await file_browser_pane.render_current_folder(client)
     except Exception as e:
@@ -200,17 +257,97 @@ async def _delete_UI():
     
     try:
         # Delete the selected file
-        await FileManager.delete(client, await __get_chat_instance(), file_browser_pane.selected)
+        await FileManager.delete(client, await _get_chat_instance(), file_browser_pane.selected)
         
         print("File deleted")
         
         # Refresh current position
-        await file_browser_pane.current_position.refresh(client, await __get_chat_instance())
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
         # Refresh UI
         await file_browser_pane.render_current_folder(client)
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
+def move_UI():
+    """
+    Move the selected file in the file browser pane
+
+    This is the UI handler that wraps the async function
+    """
+    loop.create_task(_move_UI())
+async def _move_UI():
+    """
+    Move the selected file in the file browser pane
+    """
+    global file_browser_pane
+    global client
+    
+    try:
+        # Check if a file is selected
+        if file_browser_pane.selected is None:
+            messagebox.showinfo("Select a file")
+            return
+        
+        popup = tk.Toplevel(root)
+        popup.title("Move File")
+        popup.geometry("700x400")
+        popup.grab_set()
+
+        # Open a new file browser pane to choose the destination
+        move_file_browser_pane = FileBrowserPane(popup, await _get_chat_instance())
+        await move_file_browser_pane.init_root(client)
+
+        # Await the popup closing without blocking the asyncio event loop
+        await wait_window_async(popup)
+        
+        # Release the grab and destroy the popup
+        popup.grab_release()
+        popup.destroy()
+        
+        # Move the selected file
+        await FileManager.move(
+            client, 
+            await _get_chat_instance(), 
+            file_browser_pane.selected, 
+            move_file_browser_pane.current_position
+        )
+        
+        print("File moved")
+        
+        # Refresh current position
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
+        # Refresh UI
+        await file_browser_pane.render_current_folder(client)
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
+    
+def sync_UI():
+    """
+    Sync the current folder in the file browser pane
+
+    This is the UI handler that wraps the async function
+    """
+    loop.create_task(_sync_UI())
+async def _sync_UI():
+    """
+    Sync the current folder in the file browser pane
+    """
+    global file_browser_pane
+    global client
+    
+    try:
+        # Open the file dialog to let the user choose a folder
+        selected_folder = _choose_folder()
+        
+        # Recursive sync the folder
+        await FileManager.sync(client, await _get_chat_instance(), selected_folder, file_browser_pane.current_position)
+        
+        # Refresh current position
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
+        # Refresh UI
+        await file_browser_pane.render_current_folder(client)
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
 #endregion
 
 
@@ -228,17 +365,59 @@ frame.pack(side=tk.LEFT, fill=tk.Y)
 
 # Buttons
 btns = [
-    ("Back", back_UI),
-    ("Create folder", create_folder_UI),
-    ("Upload file", upload_file_UI),
-    ("Rename", rename_UI),
-    ("Delete", delete_UI)
+    ("Back", back_UI, tk.NORMAL),
+    ("Create folder", create_folder_UI, tk.NORMAL),
+    ("Upload file", upload_file_UI, tk.NORMAL),
+    ("Download file", download_file_UI, tk.NORMAL),
+    ("See preview", see_preview_UI, tk.NORMAL),
+    ("Rename", rename_UI, tk.NORMAL),
+    ("Move", move_UI, tk.NORMAL),
+    ("Sync", sync_UI, tk.NORMAL),
+    ("Delete", delete_UI, tk.NORMAL)
 ]
-for txt, cmd in btns:
-    tk.Button(frame, text=txt, command=cmd).pack(pady=5)
+for txt, cmd, state in btns:
+    tk.Button(frame, text=txt, command=cmd, state=state).pack(pady=5)
     
 # Main asyncio event loop
 loop = asyncio.get_event_loop()
+
+async def wait_window_async(win: tk.Toplevel):
+    """Asynchronously wait for a Tk `Toplevel` window to close without blocking the asyncio loop.
+
+    The function returns when the window is destroyed or its WM_DELETE_WINDOW is invoked.
+    """
+    future = loop.create_future()
+
+    def _on_close(*_):
+        if not future.done():
+            future.set_result(None)
+
+    try:
+        win.protocol("WM_DELETE_WINDOW", _on_close)
+    except Exception:
+        pass
+
+    # If the toplevel itself is destroyed, fire the future.
+    # Ignore Destroy events coming from child widgets (they bubble up).
+    def _on_destroy(event=None):
+        if event is None:
+            _on_close()
+            return
+        # Only react when the event's widget is the toplevel itself
+        try:
+            if event.widget is not win:
+                return
+        except Exception:
+            return
+        _on_close()
+
+    win.bind("<Destroy>", _on_destroy)
+
+    # If window already destroyed, return immediately
+    if not win.winfo_exists():
+        return
+
+    await future
 
 # Run the event loop in background
 async def main_async():
