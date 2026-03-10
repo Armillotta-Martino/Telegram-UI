@@ -19,7 +19,9 @@ API_HASH = get_environment_value('TELEGRAM_UPLOAD_API_HASH', '')
 
 ### Optional Telegram Configurations
 # Number of parallel upload blocks
-PARALLEL_UPLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 1)
+PARALLEL_UPLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 4)
+# Number of parallel download blocks
+PARALLEL_DOWNLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_DOWNLOAD_BLOCKS', 10)
 # Max number of retries for reconnect
 MAX_RECONNECT_RETRIES = get_environment_value('TELEGRAM_UPLOAD_MAX_RECONNECT_RETRIES', 5)
 # Reconnect timeout
@@ -99,6 +101,10 @@ PREMIUM_USER_MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024  # 4GB
 PART_MAX_SIZE = 512 * 1024  # 512KB
 # Small file threshold
 SMALL_FILE_THRESHOLD = 10 * 1024 * 1024  # 10MB
+
+# Chunk sizes for upload.getFile must be multiples of the smallest size
+MIN_CHUNK_SIZE = 4096
+MAX_CHUNK_SIZE = 512 * 1024
 
 # Max caption length
 USER_MAX_CAPTION_LENGTH = 1024

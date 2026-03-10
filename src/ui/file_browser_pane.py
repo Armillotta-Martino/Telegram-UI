@@ -4,7 +4,7 @@ from tkinter import Image, ttk
 from xml.dom.minidom import Entity
 
 from config import ICON_FILE_PATH, ICON_FOLDER_PATH
-from file_manager import FileManager
+from file_manager.file_manager_main import FileManager
 from dbJson.file_message import FileMessage
 from telegram.telegram_manager_client import TelegramManagerClient
 from PIL import Image, ImageTk
@@ -167,12 +167,15 @@ class FileBrowserPane:
             # Create the root message and pin it
             root_message = await FileManager.create_root(client, self.__chat_instance)
         
+        # Refresh the root message
+        await root_message.refresh(client, self.__chat_instance)
+        
         # Set the root and current positions
         self.__root = root_message
         self.__current = root_message
         
         # Render the root folder
-        asyncio.create_task(self.render_current_folder(client))
+        await self.render_current_folder(client)
     
     def __load_icon(self, path: str, size: tuple) -> ImageTk.PhotoImage:
         """
@@ -222,7 +225,7 @@ class FileBrowserPane:
             # Bind single click to selection
             btn.bind("<Button-1>", lambda event, b=btn: self.on_item_select(b))
             # Bind double click to open
-            btn.bind("<Double-Button-1>", lambda event, p=item: self.on_item_double_click(client, p))
+            btn.bind("<Double-Button-1>", lambda event, p=item: asyncio.create_task(self.on_item_double_click(client, p)))
             
             btn.image = icon
             btn.pack()
@@ -251,7 +254,7 @@ class FileBrowserPane:
         # Save the selected item in a variable
         self.__selected_button = button
 
-    def on_item_double_click(self, client : TelegramManagerClient, message : FileMessage):
+    async def on_item_double_click(self, client : TelegramManagerClient, message : FileMessage):
         """
         Handle the double-click action on an item in the file browser
             
@@ -261,7 +264,7 @@ class FileBrowserPane:
         """
         
         if message.is_folder:
-            asyncio.create_task(self.go_to_path(client, message))
+            await self.go_to_path(client, message)
         else:
             # TODO Check if it is a supported file
             # TODO get the file to display (LRV, image, ecc...)
