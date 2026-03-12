@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 import os
 from typing import Generator, Dict, Optional, Set
@@ -301,6 +302,13 @@ class FileManager():
             message: The file or folder message to delete
         """
         
+        class SyncState(Enum):
+            NEW = "new"
+            IN_PROGRESS = "in_progress"
+            PAUSED = "paused"
+            STOPPED = "stopped"
+            FINISHED = "finished"
+            
         async def scan_dir(path: str, current_position: FileMessage, sync_job: dict):
             """
                 Recursively explore the folder and sync it with Telegram
@@ -424,6 +432,7 @@ class FileManager():
             sync_job = {
                 "pc_path": pc_path,
                 "telegram_link": telegram_link,
+                "state": SyncState.NEW.value,
                 "synced_files": []
             }
             # Append the new sync job to the list of sync jobs
@@ -493,6 +502,29 @@ class FileManager():
             """
             return pc_file_path in sync_job["synced_files"]
         
+        async def update_sync_job_state(sync_job: Dict, new_state: SyncState):
+            """
+            Update the state of the sync job
+
+            Args:
+                sync_job (Dict): The sync job to update
+                new_state (SyncState): The new state of the sync job
+            """
+            # Load the sync jobs from the json file
+            with open("sync_jobs.json", "r") as f:
+                sync_jobs = json.load(f)
+                
+                # Find the sync job to update
+                for job in sync_jobs:
+                    if job["pc_path"] == sync_job["pc_path"] and job["telegram_link"] == sync_job["telegram_link"]:
+                        # Sync job found, update its state
+                        job["state"] = new_state.value
+                        break
+            
+            # Save the updated sync jobs in the json file
+            with open("sync_jobs.json", "w") as f:
+                json.dump(sync_jobs, f, indent=4)
+        
         # Update
         await current_position.refresh(client, chat_instance)
         
@@ -501,6 +533,9 @@ class FileManager():
         
         # Get the sync job
         sync_job = await get_sync_job(folder, FileMessage.calculate_message_link(chat_instance, current_position))
+        
+        # Update the sync job state to in_progress
+        await update_sync_job_state(sync_job, SyncState.IN_PROGRESS)
         
         # Check if the current folder has already been synced (this is useful to avoid syncing the 
         # same folder multiple times in case of nested folders with the same name)
@@ -529,3 +564,6 @@ class FileManager():
         
         # Scan the folder
         await scan_dir(folder, current_position, sync_job)
+        
+        # Update the sync job state to finished
+        await update_sync_job_state(sync_job, SyncState.FINISHED)
