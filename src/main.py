@@ -1,5 +1,4 @@
 import asyncio
-import json
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from xml.dom.minidom import Entity
@@ -11,6 +10,7 @@ from file_types.file import File
 from config import API_ID, API_HASH, CHANNEL_NAME
 from ui.pop_up_textinput import PopUpTextInput
 from ui.file_browser_pane import FileBrowserPane
+from ui.sync_jobs_panel import SyncJobsPanel
 from telegram.telegram_manager_client import TelegramManagerClient
 
 # === Global state ===
@@ -22,6 +22,12 @@ target_chat_instance : Entity = None
 
 # Class to browse the file structure
 file_browser_pane : FileBrowserPane = None
+
+# App running flag (used to stop background loops on close)
+app_running = True
+
+# Sync panel instance (created after UI frame exists)
+sync_panel = None
 
 # === Telegram async initializer ===
 async def init():
@@ -46,6 +52,12 @@ async def init():
     # Initial the root of the file browser pane with the chat instance
     file_browser_pane = FileBrowserPane(root, await _get_chat_instance())
     await file_browser_pane.init_root(client)
+    # give the sync panel a reference to the file browser pane so actions can refresh it
+    try:
+        if sync_panel:
+            sync_panel.set_file_browser_pane(file_browser_pane)
+    except Exception:
+        pass
     
 async def _get_chat_instance():
     """
@@ -350,12 +362,26 @@ async def _sync_UI():
         messagebox.showerror("Error", str(e))
 #endregion
 
-
-
 # === Tkinter UI Setup ===
 root = tk.Tk()
 root.title("Telegram Uploader")
 root.geometry("800x500")
+
+# Window close handler: stop background routines and persist state
+def on_close():
+    global app_running
+    app_running = False
+    try:
+        if sync_panel:
+            sync_panel.stop()
+    except Exception:
+        pass
+
+# Wire the close handler
+try:
+    root.protocol("WM_DELETE_WINDOW", on_close)
+except Exception:
+    pass
 
 # --- SIDEBAR (left) ---
 
@@ -369,7 +395,8 @@ btns = [
     ("Create folder", create_folder_UI, tk.NORMAL),
     ("Upload file", upload_file_UI, tk.NORMAL),
     ("Download file", download_file_UI, tk.NORMAL),
-    ("See preview", see_preview_UI, tk.NORMAL),
+    # TODO implement see preview functionality, then uncomment this button
+    #("See preview", see_preview_UI, tk.NORMAL),
     ("Rename", rename_UI, tk.NORMAL),
     ("Move", move_UI, tk.NORMAL),
     ("Sync", sync_UI, tk.NORMAL),
@@ -381,8 +408,12 @@ for txt, cmd, state in btns:
 # Main asyncio event loop
 loop = asyncio.get_event_loop()
 
+# Instantiate Sync Jobs panel
+sync_panel = SyncJobsPanel(frame, loop, client)
+
 async def wait_window_async(win: tk.Toplevel):
-    """Asynchronously wait for a Tk `Toplevel` window to close without blocking the asyncio loop.
+    """
+    Asynchronously wait for a Tk `Toplevel` window to close without blocking the asyncio loop.
 
     The function returns when the window is destroyed or its WM_DELETE_WINDOW is invoked.
     """
@@ -425,7 +456,16 @@ async def main_async():
     Main async function to initialize the Telegram client and keep the loop running
     """
     await init()
-    while True:
+    
+    # start background refresher for sync jobs UI
+    try:
+        if sync_panel:
+            sync_panel.start_refresher()
+    except Exception:
+        pass
+    
+    # Keep the loop running until the app is closed
+    while app_running:
         await asyncio.sleep(0.1)
 
 def run_app():
@@ -434,22 +474,42 @@ def run_app():
     """
     # Ensure FFMPEG is available
     FFMPEG.ensure_ffmpeg()
-    
     # Run the main async function and Tkinter main loop
-    loop.run_until_complete(
-        asyncio.gather(
-            main_async(),
-            run_tk()
+    try:
+        loop.run_until_complete(
+            asyncio.gather(
+                main_async(),
+                run_tk()
+            )
         )
-    )
+    finally:
+        # final cleanup: persist jobs, destroy UI and close loop
+        try:
+            if sync_panel:
+                sync_panel.stop()
+        except Exception:
+            pass
+        try:
+            if root.winfo_exists():
+                root.destroy()
+        except Exception:
+            pass
+        try:
+            loop.close()
+        except Exception:
+            pass
 
 async def run_tk():
     """
     Run the Tkinter main loop asynchronously
     """
-    while True:
-        root.update()
-        await asyncio.sleep(0.01)
+    try:
+        while app_running:
+            root.update()
+            await asyncio.sleep(0.01)
+    except Exception:
+        # if root is destroyed or update fails, exit
+        return
 
 # Run
 run_app()
