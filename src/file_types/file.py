@@ -63,6 +63,16 @@ class File(FileIO):
         """
         return '.'.join(self.file_name.split('.')[:-1])
     
+    @property 
+    def bytes(self):
+        """
+        Get the file content as bytes
+        Returns:
+            bytes: The file content as bytes
+        """
+        with open(self.path, 'rb') as f:
+            return f.read()
+        
     def __is_valid_file(self, error_logger=None):
         """
         Check if the file is valid
@@ -118,41 +128,3 @@ class File(FileIO):
         if not split_seek:
             self.remaining_size += self.tell() - offset
         return super().seek(offset, whence)
-    
-    '''
-    @property
-    def file_attributes(self):
-        """
-        Get the file metadata attributes
-        """
-        #if self.force_file:
-        #    return [DocumentAttributeFilename(self.file_name)]
-        #else:
-        return self.__get_file_attributes(self.path)
-    
-    def __get_file_attributes(self, file):
-        """
-        Get the file attributes from metadata
-        """
-        attrs = []
-        if self.get_mime(file) == 'video':
-            # File is a video
-            metadata = Video.video_metadata(file)
-            video_meta = metadata
-            meta_groups = None
-            if hasattr(metadata, '_MultipleMetadata__groups'):
-                # Is mkv
-                meta_groups = metadata._MultipleMetadata__groups
-            if metadata is not None and not metadata.has('width') and meta_groups:
-                video_meta = meta_groups[next(filter(lambda x: x.startswith('video'), meta_groups._key_list))]
-            if metadata is not None:
-                supports_streaming = isinstance(video_meta, MP4Metadata)
-                attrs.append(DocumentAttributeVideo(
-                    (0, metadata.get('duration').seconds)[metadata_has(metadata, 'duration')],
-                    (0, video_meta.get('width'))[metadata_has(video_meta, 'width')],
-                    (0, video_meta.get('height'))[metadata_has(video_meta, 'height')],
-                    False,
-                    supports_streaming,
-                ))
-        return attrs
-    '''

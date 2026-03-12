@@ -9,6 +9,7 @@ import time
 from typing import List
 import zipfile
 import click
+import tempfile
 from file_manager.file_manager_utils import FileManager_Utils
 
 from typing import TYPE_CHECKING
@@ -17,9 +18,11 @@ import requests
 
 # Import constants from config
 from config import FFMPEG_RELATIVE_PATH, FFPROBE_RELATIVE_PATH
+from file_types.file import File
 
 if TYPE_CHECKING:
     from file_types.video import Video
+    from file_types.image import Image
 
 class FFMPEG():
     """
@@ -360,3 +363,45 @@ class FFMPEG():
         matchs = re.findall("(\d{2,6})x(\d{2,6})", video_lines[0])
         if matchs:
             return [int(x) for x in matchs[0]]
+
+    def extract_frame_from_video(video: 'Video', time: float = 0.0) -> 'Image':
+        """
+        Extract a single frame from video data (bytes) at the given time (seconds).
+
+        Returns the image as bytes (JPEG). Raises Exception on failure.
+        """
+        # Build ffmpeg command to write a single jpeg frame to a temporary file,
+        # then read the file bytes and delete the temporary file.
+        ffmpeg_path = FFMPEG.__get_command_path("FFMPEG", FFMPEG_RELATIVE_PATH)
+
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
+        tmp_path = tmp.name
+        tmp.close()
+
+        # Scale to cover 320x320 (scale up/down preserving aspect) then center-crop to exactly 320x320
+        # Use 'increase' (supported) instead of 'cover'
+        vf_filter = 'scale=320:320:force_original_aspect_ratio=increase,crop=320:320'
+        cmd = [
+            ffmpeg_path,
+            '-hide_banner', '-loglevel', 'error',
+            '-ss', str(time),
+            '-i', video.path,
+            '-vf', vf_filter,
+            '-frames:v', '1',
+            '-q:v', '2',
+            '-y',
+            tmp_path
+        ]
+
+        try:
+            p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            if p.returncode != 0:
+                stderr_text = err.decode('utf-8', errors='ignore') if isinstance(err, (bytes, bytearray)) else str(err)
+                raise Exception(f'ffmpeg command failed with error: {stderr_text}')
+
+            return File(tmp_path)
+        except FileNotFoundError:
+            raise Exception('ffmpeg command is not available. Thumbnails for videos are not available!')
+        
+        
