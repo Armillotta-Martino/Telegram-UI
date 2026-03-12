@@ -7,9 +7,9 @@ from file_types.file import File
 
 hachoir_config.quiet = True
 
-class Video(File):
+class Image(File):
     """
-        Video file type class
+        Image file type class
         Inherits from File
     """
     
@@ -18,38 +18,35 @@ class Video(File):
         Constructor
         
         Args:
-            file: The file to convert to Video
-            force_file: Force to treat the file as a video even if the mime type is not video
+            file: The file to convert to Image
+            force_file: Force to treat the file as an image even if the mime type is not image
         """
-        # Convert File to Video
+        # Convert File to Image
         super().__init__(file.path)
         
-        # Check if the file is a valid video
-        if self.get_mime() != 'video':
+        # Check if the file is a valid image
+        if self.get_mime() != 'image':
             self = None
             return
         
         self.force_file = self.force_file if force_file is None else force_file
     
-    def get_total_frames_count(self):
+    def get_dimensions(self):
         """
-        Get the total number of frames in the video
+        Get the dimensions of the image
         
-        This use ffprobe to get the number of frames
+        This use ffprobe to get the dimensions
         
         Returns:
-            int: Total number of frames
+            tuple: (width, height) of the image
         """
         
         ################################################################################
         # Execute ffprobe (to show streams), and get the output in JSON format
-        # Actually counts packets instead of frames but it is much faster
-        # https://stackoverflow.com/questions/2017843/fetch-frame-count-with-ffmpeg/28376817#28376817
         data = FFMPEG.call_ffprobe([
             '-v', 'error',
             '-select_streams', 'v:0',
-            '-count_packets',
-            '-show_entries', 'stream=nb_read_packets',
+            '-show_entries', 'stream=width,height',
             '-of', 'csv=p=0',
             '-of', 'json',
             self.path
@@ -58,5 +55,5 @@ class Video(File):
         # Convert data from JSON string to dictionary
         dict = json.loads(data)
         
-        # Get the total number of frames
-        return int(dict['streams'][0]['nb_read_packets'])
+        # Get the dimensions
+        return int(dict['streams'][0]['width']), int(dict['streams'][0]['height'])

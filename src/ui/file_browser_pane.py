@@ -1,11 +1,14 @@
 import asyncio
+import json
+import os
+import tempfile
 import tkinter as tk
 from tkinter import Image, ttk
 from xml.dom.minidom import Entity
 
 from config import ICON_FILE_PATH, ICON_FOLDER_PATH
 from file_manager.file_manager_main import FileManager
-from dbJson.file_message import FileMessage
+from dbJson.file_message import FileMessage, FileMessageType
 from telegram.telegram_manager_client import TelegramManagerClient
 from PIL import Image, ImageTk
 
@@ -211,16 +214,15 @@ class FileBrowserPane:
         col = 0
         # Render each child item
         for item in children:
-            is_dir = item.is_folder
-            name = item.file_name
-            icon = self.icons['folder'] if is_dir else self.icons['default']
+            # Get the icon for the item (folder or file)
+            icon = await self.render_file_icon(client, item)
             
             # Create a frame for each item
             frame = tk.Frame(self.__scroll_frame, width=100, height=100)
             frame.grid(row=row, column=col, padx=15, pady=15)
             
             # Create the button with icon and name
-            btn = tk.Button(frame, image=icon, text=name, compound="top", wraplength=80, relief='flat', background="white")
+            btn = tk.Button(frame, image=icon, text=item.file_name, compound="top", wraplength=80, relief='flat', background="white")
             btn.message = item
             # Bind single click to selection
             btn.bind("<Button-1>", lambda event, b=btn: self.on_item_select(b))
@@ -235,6 +237,31 @@ class FileBrowserPane:
                 col = 0
                 row += 1
 
+    async def render_file_icon(self, client : TelegramManagerClient , file_message : FileMessage) -> ImageTk.PhotoImage:
+        ## Icon
+            
+        # Load the default icon based on the item type (folder or file)
+        icon = self.icons['folder'] if file_message.is_folder else self.icons['default']
+            
+        # Download the thumbnail if it is a file and has a thumbnail
+        # Iterate through the messages to find the file message
+        async for message in client.iter_messages(self.__chat_instance, reply_to=file_message.telegram_message.id):
+            # Find the file message
+            json_message = json.loads(message.message)
+            if json_message.get("Type") == FileMessageType.THUMBNAIL.value:
+                # Create a temporary file to store the thumbnail
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
+                tmp.close()
+                # Download the thumbnail media to the temporary file
+                await client.download_media(message.media, file=tmp.name)
+                # Override the icon with the thumbnail
+                icon = ImageTk.PhotoImage(Image.open(tmp.name).resize(self.ICON_SIZE, Image.Resampling.LANCZOS))
+                # Remove the temporary file
+                os.remove(tmp.name)
+                break
+            
+        return icon
+    
     def on_item_select(self, button : tk.Button):
         """
         Handle the selection of an item in the file browser

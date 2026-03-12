@@ -16,6 +16,7 @@ class FileMessageType(Enum):
     FOLDER = "FOLDER"
     FILE = "FILE"
     LRV = "LRV"
+    THUMBNAIL = "THUMBNAIL"
 
 
 class FileMessage(Message):
@@ -483,6 +484,11 @@ class FileMessage(Message):
                 return {
                     "Version": FILE_CAPTION_VERSION,
                     "Part" : "LRV"
+                }
+            case FileMessageType.THUMBNAIL:
+                return {
+                    "Version": FILE_CAPTION_VERSION,
+                    "Type" : FileMessageType.THUMBNAIL.value
                 }
             case _:
                 raise ValueError(f"Unknown FileMessageType: {type}")
