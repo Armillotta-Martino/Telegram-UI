@@ -279,6 +279,33 @@ async def _delete_UI():
         await file_browser_pane.render_current_folder(client)
     except Exception as e:
         messagebox.showerror("Error", str(e))
+        
+def open_preview_UI():
+    """
+    Open a preview of the selected file in the file browser pane
+    
+    This is the UI handler that wraps the async function
+    """
+    loop.create_task(_open_preview_UI())
+async def _open_preview_UI():
+    """
+    Open a preview of the selected file in the file browser pane
+    """
+    global file_browser_pane
+    global client
+    
+    try:
+        # Open a preview of the selected file inside the popup
+        await FileManager.open_preview(client, await _get_chat_instance(), file_browser_pane.selected)
+        
+        print("File preview opened")
+        
+        # Refresh current position
+        await file_browser_pane.current_position.refresh(client, await _get_chat_instance())
+        # Refresh UI
+        await file_browser_pane.render_current_folder(client)
+    except Exception as e:
+        messagebox.showerror("Error", str(e))
 
 def move_UI():
     """
@@ -395,8 +422,7 @@ btns = [
     ("Create folder", create_folder_UI, tk.NORMAL),
     ("Upload file", upload_file_UI, tk.NORMAL),
     ("Download file", download_file_UI, tk.NORMAL),
-    # TODO implement see preview functionality, then uncomment this button
-    #("See preview", see_preview_UI, tk.NORMAL),
+    ("Open preview", open_preview_UI, tk.NORMAL),
     ("Rename", rename_UI, tk.NORMAL),
     ("Move", move_UI, tk.NORMAL),
     ("Sync", sync_UI, tk.NORMAL),

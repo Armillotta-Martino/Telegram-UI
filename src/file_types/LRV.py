@@ -13,7 +13,7 @@ class LRV():
     """
     
     @classmethod
-    def generate_video_low_resolution(self, video : Video, width : int = -1, height=480):
+    def generate_video_low_resolution(self, video : Video, width : int = -1, height=360):
         """
         Calculate the low resolution video for the given video file
 
@@ -30,7 +30,8 @@ class LRV():
             Exception: If the video ratio is not available
         """
         # Output path of the low resolution video
-        output_path = os.path.dirname(video.path) + "/" + video.short_name + "_LRV" + os.path.splitext(video.path)[1]
+        # It should be in MP4 format to be compatible with Telegram preview
+        output_path = os.path.dirname(video.path) + "/" + video.short_name + "_LRV.mp4"
 
         # Check the ratio of the video
         ratio = FFMPEG.get_video_resolution(video)
@@ -47,13 +48,38 @@ class LRV():
             # Default to 480p height
             height = 480
             width = ratio[0] * height / ratio[1]
-
+            
+        '''
         # Execute the ffmpeg command for create the LRV file
         p = FFMPEG.call_ffmpeg([
             '-y',
             '-i', video.name,
             '-vf',
             'scale={}:{}'.format(math.ceil(width/2)*2 if width != -1 else width, math.ceil(height/2)*2 if height != -1 else height),
+            '-progress', 'pipe:1',
+            output_path,
+        ])
+        '''
+        
+        # Using 'force_original_aspect_ratio' and 'setsar' in filters is usually safer
+        scale_str = "scale='min({},iw)':'min({},ih)':force_original_aspect_ratio=decrease,pad='ceil(iw/2)*2':'ceil(ih/2)*2'".format(width, height)
+
+        # Fast, lightweight encoding settings for preview-quality LRV
+        # - lower resolution (default 360p), lower framerate, higher CRF, veryfast preset
+        # - reduced audio bitrate to keep file small
+        p = FFMPEG.call_ffmpeg([
+            '-y',
+            '-i', video.name,
+            '-vf', scale_str,
+            '-r', '24',                # lower frame rate for smaller size
+            '-c:v', 'libx264',         # H.264 encoder
+            '-preset', 'veryfast',     # very fast encode (less compression, faster)
+            '-crf', '32',              # higher CRF = lower quality but much smaller file
+            '-pix_fmt', 'yuv420p',     # ensure 8-bit color
+            '-profile:v', 'main',
+            '-level', '3.1',
+            '-b:a', '64k',             # low audio bitrate
+            '-movflags', '+faststart', # metadata at the beginning for progressive playback
             '-progress', 'pipe:1',
             output_path,
         ])
