@@ -11,7 +11,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/Armillotta-Martino/Telegram-UI">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+    <img src="docs/images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Telegram-UI</h3>
@@ -128,19 +128,32 @@ python src/main.py
 
 <!-- ROADMAP -->
 ## Roadmap
-
+ 
 Features to add:
 - [X] Add the download part
 - [X] Change the file image with a preview
 - [X] Automatically download FFMPEG
 - [X] Add a move function
-- [ ] Be able to handle every type of file
-- [ ] Add the possibility of open a big preview of the file
-- [ ] Add a transaction system to undo all the changes if something go wrong
-- [ ] Add the code to clear the folder system if a message has been deleted or has a error
+- [X] Add a sync job list to handle sync jobs
+- [ ] Add robust MIME type detection and handler plugins for all file types
+- [ ] Fullscreen / large preview with native player (video/audio/image)
+- [ ] Transactional file operations with rollback support
+- [ ] Automatic cleanup when a Telegram message is deleted or errors occur
+- [ ] Add resumable and chunked uploads/downloads to improve reliability
+- [ ] Implement retry/backoff and network error handling for transfers
+- [ ] Add structured logging, configurable log levels, and error reporting
+- [ ] Add unit and integration tests; enforce with CI (GitHub Actions)
+- [ ] Add code formatting and linting (Black, isort, flake8/ruff)
+- [ ] Refactor to modules, add typing hints and docstrings
+- [ ] Add a Settings UI and persistent configuration (JSON or TOML)
+- [ ] Add performance profiling and benchmarks for upload/download paths
+- [ ] Provide packaging: single-file executable and optional pip package
+- [ ] Add better progress UI, notifications, and clearer error messages
+- [ ] Improve UI/UX and accessibility (keyboard navigation, contrast)
+- [ ] Add an examples/usage docs folder and tutorial walkthroughs
+- [ ] Improve the download speed (Now it's really slow but if download from web.telegram it is fast)
+- [ ] Improve the upload speed (Now it's slow but if upload from web.telegram it is fast)
 
-UI:
-- [ ] Design a better UI
 
 See the [open issues](https://github.com/Armillotta-Martino/Telegram-UI/issues) for a full list of proposed features (and known issues).
 
@@ -192,7 +205,7 @@ Armillotta Martino - [@martinoarmillotta](https://www.instagram.com/martinoarmil
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 
 [linkedin-url]: https://www.linkedin.com/in/martino-armillotta-702a1316a/
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: docs/images/screenshot.png
 
 [Python]: https://img.shields.io/badge/python-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Python-url]: https://www.python.org/
