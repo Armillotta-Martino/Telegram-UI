@@ -45,6 +45,27 @@ class PopUp_Progress_Bar:
         self.root = tk.Tk()
         self.root.title('Progress')
         self.root.geometry('420x100')
+        # Try to make the window appear on top even when the main app is unfocused
+        try:
+            try:
+                self.root.attributes('-topmost', True)
+            except Exception:
+                try:
+                    self.root.wm_attributes('-topmost', True)
+                except Exception:
+                    pass
+            self.root.lift()
+            try:
+                self.root.focus_force()
+            except Exception:
+                pass
+            # remove topmost after a short delay so it doesn't stay always on top
+            try:
+                self.root.after(500, lambda: self.root.attributes('-topmost', False))
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         self._bar = ttk.Progressbar(self.root, orient='horizontal', length=380, mode='determinate')
         self._bar.pack(padx=10, pady=(10, 5))

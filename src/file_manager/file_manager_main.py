@@ -1,6 +1,19 @@
+import asyncio
 from enum import Enum
 import json
 import os
+import sys
+import tempfile
+import threading
+import http.server
+import socketserver
+import webbrowser
+import urllib.parse
+import mimetypes
+import time
+import socket
+import subprocess
+from tkinter import Tk
 from typing import Generator, Dict, Optional, Set
 from xml.dom.minidom import Entity
 
@@ -237,7 +250,142 @@ class FileManager():
         
         # Edit the message
         await client.edit_message(chat_instance, message.telegram_message, json_new_message)
+        
+    @classmethod
+    async def open_preview(
+        self, 
+        client : TelegramClient, 
+        chat_instance : Entity, 
+        message : FileMessage
+        ):
+        """
+        Open a preview of a file or a folder
+        
+        Args:
+            client: The Telegram client
+            chat_instance: The chat instance
+            message: The file or folder message to preview
+        """
+        # Update
+        await message.refresh(client, chat_instance)
+        
+        # Display the video preview on the pop up panel
+        
+        # Iterate through the messages to find the file message
+        async for message in client.iter_messages(chat_instance, reply_to=message.telegram_message.id):
+            
+            # Find the file message
+            json_message = json.loads(message.message)
+            
+            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value:
+                # create temp file path
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+                tmp_path = tmp.name
+                tmp.close()
 
+                # start background download (do not await)
+                download_task = asyncio.create_task(client.download_media(message, file=tmp_path))
+
+                # wait for a small initial buffer (timeout to avoid infinite wait)
+                initial_threshold = 100 * 1024  # 100 KB
+                waited = 0
+                timeout = 10  # seconds
+                while waited < timeout:
+                    try:
+                        if os.path.exists(tmp_path) and os.path.getsize(tmp_path) >= initial_threshold:
+                            break
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.25)
+                    waited += 0.25
+
+                # open with VLC if available, otherwise fallback to default opener
+                try:
+                    proc = None
+
+                    if sys.platform == 'win32':
+                        # Use PowerShell Start-Process -Wait to reliably wait for the launched app to exit
+                        try:
+                            cmd = f'Start-Process -FilePath "{tmp_path}" -Wait'
+                            proc = subprocess.Popen(['powershell', '-NoProfile', '-Command', cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        except Exception:
+                            # fallback to startfile (no waiting)
+                            try:
+                                os.startfile(tmp_path)
+                                proc = None
+                            except Exception:
+                                proc = None
+                    else:
+                        # prefer vlc for progressive playback and wait on it
+                        try:
+                            proc = subprocess.Popen(['vlc', tmp_path, '--play-and-exit'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        except FileNotFoundError:
+                            if sys.platform == 'darwin':
+                                # macOS: open with -W to wait until app closes
+                                proc = subprocess.Popen(['open', '-W', tmp_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            else:
+                                # Linux: xdg-open returns immediately; spawn it anyway and fall back to timed cleanup
+                                try:
+                                    proc = subprocess.Popen(['xdg-open', tmp_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                except Exception:
+                                    proc = None
+
+                    def _wait_and_cleanup(p, path, download_task_ref, loop_ref):
+                        try:
+                            if p is not None:
+                                p.wait()
+                        except Exception:
+                            pass
+
+                        # Cancel the download task on the event loop if it's still running
+                        try:
+                            async def _cancel_and_wait(t):
+                                try:
+                                    if not t.done():
+                                        t.cancel()
+                                        try:
+                                            await t
+                                        except asyncio.CancelledError:
+                                            pass
+                                except Exception:
+                                    pass
+
+                            try:
+                                # schedule cancellation on the original event loop
+                                fut = asyncio.run_coroutine_threadsafe(_cancel_and_wait(download_task_ref), loop_ref)
+                                # wait briefly for cancellation to complete
+                                try:
+                                    fut.result(timeout=5)
+                                except Exception:
+                                    pass
+                            except Exception:
+                                # fallback: attempt to call cancel() directly
+                                try:
+                                    download_task_ref.cancel()
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
+                        # remove the temporary file
+                        try:
+                            if os.path.exists(path):
+                                os.remove(path)
+                        except Exception:
+                            pass
+
+                    # Capture running loop and start a thread to wait for player exit and then cleanup
+                    try:
+                        loop_ref = asyncio.get_running_loop()
+                    except Exception:
+                        loop_ref = None
+
+                    cleanup_thread = threading.Thread(target=_wait_and_cleanup, args=(proc, tmp_path, download_task, loop_ref), daemon=True)
+                    cleanup_thread.start()
+                except Exception as e:
+                    print('Failed to open player:', e)
+                
+        
     @classmethod
     async def delete(
         self, 

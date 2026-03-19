@@ -1,4 +1,6 @@
+import functools
 import json
+import os
 from tkinter import filedialog
 from xml.dom.minidom import Entity
 from dbJson.file_message import FileMessage, FileMessageType
@@ -29,8 +31,9 @@ class FileManager_Download:
         async for message in client.iter_messages(chat_instance, reply_to=file.telegram_message.id):
             # Find the file message
             json_message = json.loads(message.message)
-            if json_message.get("Type") == FileMessageType.LRV.value:
-                # Skip LRV files
+            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value or \
+               json_message.get("Type") is not None and json_message.get("Type") == FileMessageType.THUMBNAIL.value:
+                # Skip LRV and thumbnail files
                 continue
             
             # Sum the downloaded size
@@ -47,12 +50,17 @@ class FileManager_Download:
             # Find the file message
             json_message = json.loads(message.message)
             
-            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value:
-                # Skip LRV files
+            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value or \
+               json_message.get("Type") is not None and json_message.get("Type") == FileMessageType.THUMBNAIL.value:
+                # Skip LRV and thumbnail files
                 continue
             
             # Download the file bytes
-            download_bytes = await client.download_media(message, bytes, progress_callback=FileManager_Utils.progress)
+            download_bytes = await client.download_media(
+                message, 
+                bytes, 
+                progress_callback=functools.partial(FileManager_Utils.progress, text=f"Downloading {file.file_name} ({message.media.document.size} bytes) part {json_message.get('Part') if json_message.get('Part') is not None else 'main'}")
+            )
             
             # Append to downloaded files list
             download_files.append({
@@ -63,13 +71,37 @@ class FileManager_Download:
         # Let the user choose the download location
         download_location = filedialog.askdirectory(title="Select the download location")
         
-        # Save the downloaded files to the disk
+        if not download_location:
+            # User cancelled
+            return None
+
+        # Write parts in the correct order. Each downloaded_file stores the original
+        # message JSON in the "message" key; use its "Part" field (0 for main) to order.
+        parts = []
         for downloaded_file in download_files:
-            with open(download_location + "/" + file.file_name, "wb") as out:
-                out.write(downloaded_file.get("download_bytes"))
+            try:
+                # Extract the part index from the message JSON
+                meta = json.loads(downloaded_file.get('message') or '{}')
+                part_index = int(meta.get('Part')) if meta.get('Part') is not None else 0
+            except Exception:
+                part_index = 0
+                
+            # Append the part index and the downloaded bytes to the parts list
+            parts.append((part_index, downloaded_file.get('download_bytes') or b''))
+            
+        # Sort parts by their index to ensure correct order
+        parts.sort(key=lambda x: x[0])
         
-        # Return the download location
-        return download_location + "/" + file.file_name
+        # Construct the output file path
+        output_path = os.path.join(download_location, file.file_name)
+        
+        # Write all parts sequentially into the output file
+        with open(output_path, 'wb') as out:
+            for _, chunk in parts:
+                out.write(chunk)
+
+        # Return the download location (full path)
+        return output_path
     """
     async def _download_file_part(
             client: TelegramManagerClient, 
