@@ -135,6 +135,7 @@ Features to add:
 - [X] Automatically download FFMPEG
 - [X] Add a move function
 - [X] Add a sync job list to handle sync jobs
+- [ ] Add a Docker image
 - [ ] Add robust MIME type detection and handler plugins for all file types
 - [ ] Fullscreen / large preview with native player (video/audio/image)
 - [ ] Transactional file operations with rollback support
@@ -147,7 +148,8 @@ Features to add:
 - [ ] Refactor to modules, add typing hints and docstrings
 - [ ] Add a Settings UI and persistent configuration (JSON or TOML)
 - [ ] Add performance profiling and benchmarks for upload/download paths
-- [ ] Provide packaging: single-file executable and optional pip package
+- [X] Provide packaging: single-file executable and optional pip package
+        DONE. It will create a dist folder with the installer. To execute run telegram-ui on the CLI
 - [ ] Add better progress UI, notifications, and clearer error messages
 - [ ] Improve UI/UX and accessibility (keyboard navigation, contrast)
 - [ ] Add an examples/usage docs folder and tutorial walkthroughs
