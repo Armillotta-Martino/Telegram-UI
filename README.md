@@ -17,7 +17,7 @@
   <h3 align="center">Telegram-UI</h3>
 
   <p align="center">
-    A Telegram project to upload videos in a Telegram channel and use it as a cloud storage
+    A Telegram project to upload files in a Telegram channel and use it as a cloud storage
     <br />
     <br />
     <a href="https://github.com/Armillotta-Martino/Telegram-UI/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
@@ -57,17 +57,19 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+[![Product Name Screen Shot][product-screenshot]]
 
 This is a simple project written in Python to upload files to Telegram. The idea come from my passion for drone and videos. I started to take a lot of videos while flying my FPV drone and a lot of them are useless but i did't want to trash them as they are a part of my learning process. So i decided to build this software that allow me to keep them and be able to always watch them
 
 
 
+<!-- BUILT WITH -->
 ### Built With
 
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
 [![Python][Python]][Python-url]
+[![Tkinter][Tkinter]][Tkinter-url]
+[![Telegram][Telegram]][Telegram-url]
+[![FFMPEG][FFMPEG]][FFMPEG-url]
 
 
 
@@ -117,7 +119,7 @@ These will be needed for the app to connect to Telegram.
 (Optional) Configure environment variables
 Create a copy of .env_example and rename it to .env, then change the values with your values from Telegram API
 
-Run the application
+Run the application by executing the main.py file in the src folder
 
 ```bash
 python src/main.py
@@ -127,18 +129,22 @@ python src/main.py
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Add the download part
-- [ ] Change the file image with a preview
+Features to add:
+- [X] Add the download part
+- [X] Change the file image with a preview
 - [X] Automatically download FFMPEG
-- [ ] Design a better UI
-- [ ] Add a move function
+- [X] Add a move function
 - [ ] Be able to handle every type of file
 - [ ] Add the possibility of open a big preview of the file
-
 - [ ] Add a transaction system to undo all the changes if something go wrong
 - [ ] Add the code to clear the folder system if a message has been deleted or has a error
 
+UI:
+- [ ] Design a better UI
+
 See the [open issues](https://github.com/Armillotta-Martino/Telegram-UI/issues) for a full list of proposed features (and known issues).
+
+
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -154,6 +160,8 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+
+
 <!-- LICENSE -->
 ## License
 
@@ -164,7 +172,7 @@ Distributed under the MIT License.
 <!-- CONTACT -->
 ## Contact
 
-Armillotta Martino - [@martinoarmillotta]([https://twitter.com/your_username](https://www.instagram.com/martinoarmillotta/)) - armillottamartino@gmail.com
+Armillotta Martino - [@martinoarmillotta](https://www.instagram.com/martinoarmillotta/) - armillottamartino@gmail.com
 
 
 
