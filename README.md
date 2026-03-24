@@ -177,6 +177,69 @@ Don't forget to give the project a star! Thanks again!
 
 
 
+<!-- CODE STYLE RULES -->
+## Code Style Rules
+
+Follow these rules when adding or changing Python code in this repository:
+
+- **Docstring format:** Function and method docstrings must use an Args/Returns style and the text must start on the line after the opening triple quotes. Do not end docstring phrases with a period.
+
+- **Docstring sections:** Use the exact section headers `Args` and `Returns` (capitalized) and list parameters and return values under them.
+
+- **Return type annotation:** Every function and method must include an explicit return type annotation (for example `-> None`, `-> str`, or `-> FileMessage`). Use forward references (strings) or `from __future__ import annotations` when needed to avoid circular import issues.
+
+- **No trailing punctuation:** Do not add a period at the end of short docstring phrases or bullet-like lines.
+
+Example docstring style:
+
+```
+def example(x: int) -> str:
+  """
+  Example function
+
+  Args:
+    x: the input integer
+
+  Returns:
+    the resulting string
+  """
+  return str(x)
+```
+
+Additional rules:
+
+- **Type hints for parameters:** All function and method parameters should include type annotations whenever practical.
+
+- **Module-level deferred annotations:** Prefer `from __future__ import annotations` at the top of modules to avoid circular imports and enable forward references.
+
+- **Avoid mutable default arguments:** Do not use mutable objects (lists, dicts, sets) as default parameter values. Use `None` and initialize inside the function.
+
+- **Formatting and linting:** The project follows Black formatting (88-char line length). Run `black .` and `isort .` before committing. Use `ruff` or `flake8` for linting where helpful.
+
+- **Logging:** Use the `logging` module instead of `print()` for runtime messages. Tests and small scripts may use `print` temporarily.
+
+- **Errors and exceptions:** Raise specific exceptions and avoid broad `except: pass` silence. If catching broad exceptions, log them.
+
+- **Naming:** Use descriptive variable and function names. Avoid single-letter names except for obvious counters (`i`, `j`).
+
+- **Testing:** Add unit tests for new functionality. Place tests under `tests/` and run them with `pytest`.
+
+- **Commits:** Write clear commit messages and reference issue numbers when applicable.
+
+### Naming conventions
+
+Follow these naming rules (aligned with Python conventions) unless a strong reason exists to deviate:
+
+- **Classes:** Use PascalCase (e.g., `MyAwesomeClass`).
+- **Functions and methods:** Use snake_case (e.g., `do_something`). Avoid camelCase unless interoperating with external APIs or following an existing code style in a small localized module.
+- **Variables and parameters:** Use snake_case for normal variables. Constants: UPPER_SNAKE_CASE.
+- **Private/internal members:** Use a single leading underscore for internal/private attributes or methods (e.g., `_helper`). Use double leading underscores (`__name`) only when you need name mangling — avoid unless necessary.
+- **Modules and packages:** Use lowercase names; modules may use underscores (e.g., `file_manager`).
+- **Attributes and properties:** Use snake_case; prefer properties over bare attributes for computed values.
+- **Verb vs noun:** Function names should be verbs or verb phrases; class names should be nouns.
+- **Avoid Hungarian/camel hybrid:** Prefer descriptive names over abbreviated or camel-style identifiers.
+
+
 <!-- LICENSE -->
 ## License
 
