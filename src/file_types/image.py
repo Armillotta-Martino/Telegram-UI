@@ -9,11 +9,12 @@ hachoir_config.quiet = True
 
 class Image(File):
     """
-        Image file type class
-        Inherits from File
+    Image file type class
+    
+    Inherits from File
     """
     
-    def __init__(self, file : File, force_file : bool = False):
+    def __init__(self, file : File, force_file : bool = False) -> None:
         """
         Constructor
         
@@ -31,7 +32,7 @@ class Image(File):
         
         self.force_file = self.force_file if force_file is None else force_file
     
-    def get_dimensions(self):
+    def get_dimensions(self) -> tuple[int, int]:
         """
         Get the dimensions of the image
         

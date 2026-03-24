@@ -1,19 +1,20 @@
-import math
 import os
 
 from compression.FFMPEG import FFMPEG
 
+# Import file types
 from file_types.file import File
 from file_types.video import Video
-
 
 class LRV():
     """
     Class to execute actions with LRV (Low resolution video) files
+    
+    This is not a real file type, but it is a "virtual" file type that represent the low resolution video of a video file
     """
     
     @classmethod
-    def generate_video_low_resolution(self, video : Video, width : int = -1, height=360):
+    def generate_video_low_resolution(self, video : Video, width : int = -1, height=360) -> File:
         """
         Calculate the low resolution video for the given video file
 
@@ -34,7 +35,7 @@ class LRV():
         output_path = os.path.dirname(video.path) + "/" + video.short_name + "_LRV.mp4"
 
         # Check the ratio of the video
-        ratio = FFMPEG.get_video_resolution(video)
+        ratio = video.get_video_resolution()
         if ratio is None:
             raise Exception('Video ratio is not available.')
         

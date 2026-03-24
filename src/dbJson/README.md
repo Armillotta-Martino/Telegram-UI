@@ -1,1 +1,1 @@
-This folder contains all the files with the code related to the JSON database
+This folder contains all the files with the code related to the JSON Telegram database

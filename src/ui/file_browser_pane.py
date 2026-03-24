@@ -5,12 +5,12 @@ import tempfile
 import tkinter as tk
 from tkinter import Image, ttk
 from xml.dom.minidom import Entity
+from PIL import Image, ImageTk
 
 from config import ICON_FILE_PATH, ICON_FOLDER_PATH
 from file_manager.file_manager_main import FileManager
 from dbJson.file_message import FileMessage, FileMessageType
 from telegram.telegram_manager_client import TelegramManagerClient
-from PIL import Image, ImageTk
 
 class FileBrowserPane:
     """ 
@@ -19,17 +19,18 @@ class FileBrowserPane:
     """
     
     ### Constants
+    
     # Icon sizes
     ICON_SIZE = (64, 64)
     # Grid configuration
     GRID_COLUMNS = 4
-    # File icons paths
+    # Default file icons paths
     FILE_ICONS = {
         'folder': ICON_FOLDER_PATH,
         'default': ICON_FILE_PATH
     }
     
-    # Parent thinker element
+    # Parent tkinter element
     __parent : tk.Tk = None
     
     # Root message. It is the root of the folders
@@ -39,77 +40,16 @@ class FileBrowserPane:
     # Selected element
     __selected_button : tk.Button = None
     
+    # Telegram chat instance
     __chat_instance : Entity = None
     
+    # UI elements
     __path_var : tk.StringVar = None
     __scroll_frame : tk.Frame = None
     
-    @property
-    def current_position(self) -> FileMessage:
-        """
-        Get the current folder position
-        
-        Returns:
-            FileMessage: The current folder message
-        """
-        return self.__current
+    # region Initialization and UI Setup
     
-    @property
-    def selected(self) -> FileMessage:
-        """
-        Get the currently selected file message
-        
-        Returns:
-            FileMessage: The currently selected file message
-        """
-        return self.__selected_button.message
-        
-    async def go_to_path(self, client : TelegramManagerClient, message : FileMessage):
-        """
-        Navigate to the specified folder message
-
-        Args:
-            client: The Telegram client
-            message: The folder message to navigate to
-        """
-        # Calculate the new path
-        folder_name = message.file_name
-        current_path = self.__path_var.get()
-        new_path = current_path + "\\" + folder_name if current_path else folder_name
-        # Update the path
-        self.__path_var.set(new_path)
-        
-        # TODO Check if it is a valid child
-        
-        # Update the current position
-        self.__current = message
-        
-        # Render the new folder
-        await self.render_current_folder(client)
-    
-    async def go_back_path(self, client : TelegramManagerClient):
-        """
-        Navigate back to the parent folder
-        
-        Args:
-            client: The Telegram client
-        """
-        # Calculate the new path
-        if '\\' in self.__path_var.get():
-            split = self.__path_var.get().rsplit('\\', 1)
-            self.__path_var.set(split[0])
-        else:
-            self.__path_var.set("")
-        
-        
-        # Update the current position
-        parent = await self.__current.get_parent(client)
-        self.__current = parent
-        
-        # Render the new folder
-        await self.render_current_folder(client)
-
-    def __init__(self, parent, chat_instance : Entity):
+    def __init__(self, parent, chat_instance : Entity) -> None:
         """
         Initialize the FileBrowserPane
 
@@ -130,7 +70,7 @@ class FileBrowserPane:
         # Initialize the UI
         self.__init_ui()
         
-    def __init_ui(self):
+    def __init_ui(self) -> None:
         """
         Initialize the UI components of the file browser pane.
         """
@@ -155,7 +95,7 @@ class FileBrowserPane:
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    async def init_root(self, client : TelegramManagerClient):
+    async def init_root(self, client : TelegramManagerClient) -> None:
         """
         Initialize the root folder by fetching or creating the root message
         
@@ -194,8 +134,82 @@ class FileBrowserPane:
         """
         img = Image.open(path).resize(size, Image.Resampling.LANCZOS)
         return ImageTk.PhotoImage(img)
+    
+    # endregion
+    
+    @property
+    def current_position(self) -> FileMessage:
+        """
+        Get the current folder position
         
-    async def render_current_folder(self, client : TelegramManagerClient):
+        Returns:
+            FileMessage: The current folder message
+        """
+        return self.__current
+    
+    @property
+    def selected(self) -> FileMessage:
+        """
+        Get the currently selected file message
+        
+        Returns:
+            FileMessage: The currently selected file message
+        """
+        return self.__selected_button.message
+    
+    # region Navigation
+      
+    async def go_to_path(self, client : TelegramManagerClient, message : FileMessage) -> None:
+        """
+        Navigate to the specified folder message
+
+        Args:
+            client: The Telegram client
+            message: The folder message to navigate to
+        """
+        # Calculate the new path
+        folder_name = message.file_name
+        current_path = self.__path_var.get()
+        new_path = current_path + "\\" + folder_name if current_path else folder_name
+        
+        # Update the path
+        self.__path_var.set(new_path)
+        
+        # TODO Check if it is a valid child
+        
+        # Update the current position
+        self.__current = message
+        
+        # Render the new folder
+        await self.render_current_folder(client)
+    
+    async def go_back_path(self, client : TelegramManagerClient) -> None:
+        """
+        Navigate back to the parent folder
+        
+        Args:
+            client: The Telegram client
+        """
+        # Calculate the new path
+        if '\\' in self.__path_var.get():
+            split = self.__path_var.get().rsplit('\\', 1)
+            self.__path_var.set(split[0])
+        else:
+            self.__path_var.set("")
+        
+        
+        # Update the current position
+        parent = await self.__current.get_parent(client)
+        self.__current = parent
+        
+        # Render the new folder
+        await self.render_current_folder(client)
+    
+    # endregion
+    
+    # region Rendering
+    
+    async def render_current_folder(self, client : TelegramManagerClient) -> None:
         """
         Render the contents of the current folder in the UI
         
@@ -262,7 +276,11 @@ class FileBrowserPane:
             
         return icon
     
-    def on_item_select(self, button : tk.Button):
+    # endregion
+    
+    # region Item Selection and Actions
+    
+    def on_item_select(self, button : tk.Button) -> None:
         """
         Handle the selection of an item in the file browser
             
@@ -281,7 +299,7 @@ class FileBrowserPane:
         # Save the selected item in a variable
         self.__selected_button = button
 
-    async def on_item_double_click(self, client : TelegramManagerClient, message : FileMessage):
+    async def on_item_double_click(self, client : TelegramManagerClient, message : FileMessage) -> None:
         """
         Handle the double-click action on an item in the file browser
             
@@ -296,3 +314,5 @@ class FileBrowserPane:
             # TODO Check if it is a supported file
             # TODO get the file to display (LRV, image, ecc...)
             print("Open file:", message)
+    
+    # endregion

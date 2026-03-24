@@ -1,12 +1,8 @@
-try:
-    import tkinter as tk
-    from tkinter import ttk
-except Exception:
-    tk = None
+import tkinter as tk
+from tkinter import ttk
 
 import threading
 import queue
-
 
 class PopUp_Progress_Bar:
     """
@@ -20,13 +16,13 @@ class PopUp_Progress_Bar:
 
     _instance = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._q = queue.Queue()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     @classmethod
-    def instance(cls):
+    def instance(cls) -> 'PopUp_Progress_Bar':
         # Recreate instance if none exists or thread stopped
         if cls._instance is None:
             cls._instance = cls()
@@ -37,7 +33,7 @@ class PopUp_Progress_Bar:
                 cls._instance = cls()
         return cls._instance
 
-    def _run(self):
+    def _run(self) -> None:
         if tk is None:
             # tkinter not available; thread exits quietly
             return
@@ -86,7 +82,7 @@ class PopUp_Progress_Bar:
         except Exception:
             pass
 
-    def _poll(self):
+    def _poll(self) -> None:
         try:
             while True:
                 pct, text = self._q.get_nowait()

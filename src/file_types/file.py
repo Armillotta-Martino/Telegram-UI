@@ -1,18 +1,15 @@
-from ast import For
 from io import SEEK_SET, FileIO
 import mimetypes
 import os
-
-from hachoir.metadata.metadata import RootMetadata
 
 mimetypes.init()
 
 class File(FileIO):
     """
-        A class that represent a generic file
+    A class that represent a generic file
     """
     
-    def __init__(self, path, force_document : bool = False):
+    def __init__(self, path, force_document : bool = False) -> None:
         """
         Constructor
         
@@ -33,9 +30,10 @@ class File(FileIO):
             raise ValueError('File "{}" is not valid.'.format(self.path))
 
     @property
-    def file_name(self):
+    def file_name(self) -> str:
         """
         Get the file name
+        
         This override the name (Usually it's a path like C:\\file)
         
         Returns:
@@ -44,7 +42,7 @@ class File(FileIO):
         return os.path.basename(self.path)
     
     @property
-    def size(self):
+    def size(self) -> int:
         """
         Get the file size
         
@@ -54,7 +52,7 @@ class File(FileIO):
         return os.path.getsize(self.path)
 
     @property
-    def short_name(self):
+    def short_name(self) -> str:
         """
         Get the file short name (without extension)
         
@@ -64,16 +62,17 @@ class File(FileIO):
         return '.'.join(self.file_name.split('.')[:-1])
     
     @property 
-    def bytes(self):
+    def bytes(self) -> bytes:
         """
         Get the file content as bytes
+        
         Returns:
             bytes: The file content as bytes
         """
         with open(self.path, 'rb') as f:
             return f.read()
         
-    def __is_valid_file(self, error_logger=None):
+    def __is_valid_file(self, error_logger=None) -> bool:
         """
         Check if the file is valid
             
@@ -104,11 +103,11 @@ class File(FileIO):
         # Return validity
         return error_message is None
     
-    def get_mime(self):
+    def get_mime(self) -> str:
         """
         Get the file mime (type)
 
-        https://pro.europeana.eu/page/media-formats-mime-types#:~:text=A%20MIME%20type%20(also%20known,accessed%20and%20used%20over%20time.
+        https://pro.europeana.eu/page/media-formats-mime-types#:~:text=A%20MIME%20type%20(also%20known,accessed%20and%20used%20over%20time
         """
         return (mimetypes.guess_type(self.path)[0] or ('')).split('/')[0]
     

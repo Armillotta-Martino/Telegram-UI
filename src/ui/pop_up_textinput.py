@@ -2,12 +2,13 @@ import tkinter as tk
 
 class PopUpTextInput:
     """
-        A simple popup dialog for entering text.
-        This class creates a modal dialog that allows the user to input a string.
-        The entered text can be retrieved after the dialog is closed.
+    A simple popup dialog for entering text.
+    
+    This class creates a modal dialog that allows the user to input a string.
+    The entered text can be retrieved after the dialog is closed.
     """
     
-    def __init__(self, parent, text = ""):
+    def __init__(self, parent, text = "") -> None:
         """
         Initialize the PopUpTextInput dialog.
         
@@ -39,7 +40,7 @@ class PopUpTextInput:
 
         parent.wait_window(self.popup)
 
-    def on_submit(self):
+    def on_submit(self) -> None:
         """
         Handle the submit button click event
         """

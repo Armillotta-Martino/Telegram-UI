@@ -2,6 +2,7 @@ from enum import Enum
 import json
 import re
 from xml.dom.minidom import Entity
+
 from telethon.tl.custom.message import Message
 from telegram.telegram_manager_client import TelegramManagerClient
 
@@ -9,7 +10,7 @@ from config import FILE_CAPTION_VERSION
 
 class FileMessageType(Enum):
     """
-        Enum representing the type of file message
+    Enum representing the type of file message
     """
     
     ROOT = "ROOT"
@@ -18,14 +19,13 @@ class FileMessageType(Enum):
     LRV = "LRV"
     THUMBNAIL = "THUMBNAIL"
 
-
 class FileMessage(Message):
     """
-        Class representing a file message in the telegram database
-        One message on telegram represents one instance of this class
+    Class representing a file message in the telegram database
+    One message on telegram represents one instance of this class
         
-        Args:
-            message: Telegram message data
+    Args:
+        message: Telegram message data
     """
     
     ### Private members
@@ -35,7 +35,7 @@ class FileMessage(Message):
     # The file message type
     __type: FileMessageType
     
-    def __init__(self, message: Message):
+    def __init__(self, message: Message) -> None:
         """
         Constructor
         
@@ -55,10 +55,10 @@ class FileMessage(Message):
         json_message = json.loads(self.__message.message)
         if "Type" not in json_message:
             raise ValueError("Message does not contain Type")
+        
         # Set the type
         self.__type = FileMessageType(json_message["Type"].upper())
 
-    
     @property
     def telegram_message(self) -> Message:
         """
@@ -97,7 +97,7 @@ class FileMessage(Message):
         Returns:
             bool: True if the message is a folder, False otherwise
         Raises:
-            ValueError: If the message is empty or has no text, or does not contain Type
+            ValueError: If the message is empty, has no text or does not contain Type
         """
         # Check message validity
         if not self.__message or not self.__message.message:
@@ -126,7 +126,7 @@ class FileMessage(Message):
         Returns:
             str: The version of the file message
         Raises:
-            ValueError: If the message is empty or has no text, or does not contain Version
+            ValueError: If the message is empty, has no text or does not contain Version
         """
         # Check message validity
         if not self.__message or not self.__message.message:
@@ -214,19 +214,19 @@ class FileMessage(Message):
         # Return the size of the document
         return self.document.size
     
-    async def get_parent(self, client : TelegramManagerClient):
+    # region Message relations methods
+    
+    async def get_parent(self, client : TelegramManagerClient) -> 'FileMessage':
         """
         Get the parent message of the current message
-            
-        This could be a property, but I prefer to keep it as a method since it is async
         
         Args:
-            self: Description
+            self: The current FileMessage instance
             client: Telegram manager client
         Returns:
             FileMessage: The parent message
         Raises:
-            ValueError: If the message is empty or has no text, or does not contain Parent
+            ValueError: If the message is empty, has no text or does not contain Parent
         """
         # Check message validity
         if not self.__message or not self.__message.message:
@@ -239,21 +239,20 @@ class FileMessage(Message):
         if "Parent" not in json_message:
             raise ValueError("Message does not contain Parent")
         
+        # Get the parent message from the link
         return await self.get_FileMessage_from_link(client, json_message["Parent"])
     
-    async def get_children(self, client : TelegramManagerClient):
+    async def get_children(self, client : TelegramManagerClient) -> list['FileMessage']:
         """
         Get the children messages of the current message
             
-        This could be a property, but I prefer to keep it as a method since it is async
-        
         Args:
-            self: Description
+            self: The current FileMessage instance
             client: Telegram manager client
         Returns:
             list[FileMessage]: The list of children messages
         Raises:
-            ValueError: If the message is empty or has no text, or does not contain Children
+            ValueError: If the message is empty, has no text or does not contain Children
         """
         
         # Check message validity
@@ -277,20 +276,18 @@ class FileMessage(Message):
         # Return children
         return children_messages_list
     
-    async def get_children_by_file_name(self, client : TelegramManagerClient, name : str):
+    async def get_children_by_file_name(self, client : TelegramManagerClient, name : str) -> list['FileMessage']:
         """
         Get the children messages of the current message that match a specific file name
-            
-        This could be a property, but I prefer to keep it as a method since it is async
         
         Args:
-            self: Description
+            self: The current FileMessage instance
             client: Telegram manager client
             name: The file name to filter children messages by
         Returns:
             list[FileMessage]: The list of children messages that match the file name
         Raises:
-            ValueError: If the message is empty or has no text, or does not contain Children
+            ValueError: If the message is empty, has no text or does not contain Children
         """
         
         # Get all children
@@ -298,15 +295,18 @@ class FileMessage(Message):
         
         # Filter children by name
         filtered_children = [child for child in children if child.file_name == name]
+        
+        # Return filtered children
         return filtered_children
     
-    async def add_children(self, client : TelegramManagerClient, chat_instance : Entity, message_link : str):
+    async def add_children(self, client : TelegramManagerClient, chat_instance : Entity, message_link : str) -> None:
         """
         Add a child message link to the current message
+        
         Add a link to the message as a child of the current message
         
         Args:
-            self: Description
+            self: The current FileMessage instance
             client: Telegram manager client
             chat_instance: Chat instance
             message_link: Message link
@@ -329,19 +329,19 @@ class FileMessage(Message):
         # Edit the message
         await client.edit_message(chat_instance, self.telegram_message, json_message)
         
-    async def remove_children(self, client : TelegramManagerClient, chat_instance : Entity, message_link : str):
+    async def remove_children(self, client : TelegramManagerClient, chat_instance : Entity, message_link : str) -> None:
         """
         Remove a child message link from the current message
         
         Args:
-            self: Description
+            self: The current FileMessage instance
             client: Telegram manager client
             chat_instance: Chat instance
             message_link: Message link
         Returns:
             None
         Raises:
-            ValueError: If the message is empty or has no text
+            ValueError: If the message is empty, has no text or does not contain Children
         """
         
         # Check message validity
@@ -361,7 +361,9 @@ class FileMessage(Message):
         # Edit the message
         await client.edit_message(chat_instance, self.telegram_message, json_message)
     
-    async def refresh(self, client : TelegramManagerClient, chat_instance : Entity):
+    # endregion
+    
+    async def refresh(self, client : TelegramManagerClient, chat_instance : Entity) -> None:
         """
         Refresh the telegram message data
         
@@ -408,7 +410,7 @@ class FileMessage(Message):
         return link
     
     @staticmethod
-    async def get_FileMessage_from_link(client : TelegramManagerClient, message_link : str):
+    async def get_FileMessage_from_link(client : TelegramManagerClient, message_link : str) -> 'FileMessage':
         """
         Get a FileMessage instance from a telegram message link
         
@@ -445,6 +447,10 @@ class FileMessage(Message):
     def generate_json_caption(type : FileMessageType, file_name : str) -> dict[str, any]:
         """
         Generate a JSON caption for the file message
+        
+        NOTE: This method can be changed to be a property of the FileMessage class, but for now 
+        I prefer to keep it as a static method since it does not depend on any instance of the class and 
+        can be used to generate captions for new messages
         
         Args:
             type: FileMessageType

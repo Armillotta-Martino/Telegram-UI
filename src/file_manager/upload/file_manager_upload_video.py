@@ -1,33 +1,32 @@
 import json
 import math
 import os
-
-from dbJson.file_message import FileMessage, FileMessageType
-from file_manager.file_manager_utils import FileManager_Utils
-from file_manager.upload.file_manager_upload_utils import FileManager_Upload_Utils
-from file_types.image import Image
-from file_types.video import Video
 import functools
-
-from telegram.telegram_manager_client import TelegramManagerClient
-from telethon.tl.types import DocumentAttributeImageSize, DocumentAttributeVideo
 from xml.dom.minidom import Entity
 
+from telethon.tl.types import DocumentAttributeImageSize, DocumentAttributeVideo
+
+# Import DbJson
+from dbJson.file_message import FileMessage, FileMessageType
+
+from file_manager.file_manager_utils import FileManager_Utils
+from file_manager.upload.file_manager_upload_utils import FileManager_Upload_Utils
+from telegram.telegram_manager_client import TelegramManagerClient
+
+## Import file types
 # Import LRV class to generate low-resolution videos
 from file_types.LRV import LRV
+from file_types.image import Image
+from file_types.video import Video
 
 # Import FFMPEG class to handle video compression
 from compression.FFMPEG import FFMPEG
-import tempfile
-from file_types.file import File
-
 
 class FileManager_Upload_Video:
-    '''
-    Upload Video Region
-    
-    This region contains all the functions to execute actions on Video file
-    '''
+    """
+    Class to handle the upload of video files to Telegram, including generating and uploading a 
+    thumbnail and a low-resolution version of the video
+    """
     
     @staticmethod
     async def upload_video(
@@ -35,13 +34,23 @@ class FileManager_Upload_Video:
         chat_instance : Entity, 
         file : Video, 
         message : FileMessage
-        ):
+        ) -> None:
         """
+        Upload a video file to Telegram, including generating and uploading a thumbnail and a low-resolution version of the video
+
+        Args:
+            client (TelegramManagerClient): The Telegram manager client to use for uploading the video
+            chat_instance (Entity): The chat entity to send the video to
+            file (Video): The video file to upload
+            message (FileMessage): The message to comment the video to
+        """
+        
+        '''
         ### Video Info
-        # NOTE: Removed now as i want to see ifi can get some of those info from telegram itself
+        # NOTE: Removed now as i want to see if i can get some of those info from telegram itself
         
         # Get video info
-        video_info = FFMPEG.get_ffprobe_file_details(file)
+        video_info = file.get_ffprobe_file_details()
         
         # Send video info as a message
         await client.send_message(
@@ -49,16 +58,14 @@ class FileManager_Upload_Video:
             message = json.dumps(video_info, indent=4),
             comment_to = message.telegram_message, 
         )
-        """
+        '''
         
         ### Thumbnail
-        # TODO Create a new method inside the video class that does this
         
         # Generate and upload the thumbnail for the video
         await FileManager_Upload_Video.__process_thumbnail(client, chat_instance, file, comment_to = message)
         
         ### LRV
-        # TODO Create a new method inside the video class that does this
         
         # Generate the LRV video
         LRV_video = LRV.generate_video_low_resolution(file)
@@ -98,7 +105,7 @@ class FileManager_Upload_Video:
         comment_to : FileMessage, 
         force_document = False, 
         supports_streaming : bool = False
-        ):
+        ) -> None:
         """
         File is normal file (less than max allowed size), upload it as a single file
         
@@ -113,7 +120,7 @@ class FileManager_Upload_Video:
         """
         
         # Get video details
-        json_video_info = FFMPEG.get_ffprobe_file_details(file)
+        json_video_info = file.get_ffprobe_file_details()
         # Convert caption to JSON string
         json_file_message = json.dumps(caption, indent=4)
         
@@ -154,7 +161,7 @@ class FileManager_Upload_Video:
         file : Video, 
         caption : str, 
         comment_to : FileMessage
-        ):
+        ) -> None:
         """
         Process large video file by splitting it into parts and uploading each part separately
         
@@ -202,7 +209,7 @@ class FileManager_Upload_Video:
         chat_entity : Entity, 
         file: Video, 
         comment_to : FileMessage,
-        ):
+        ) -> None:
         """
         File is normal file (less than max allowed size), upload it as a single file
         

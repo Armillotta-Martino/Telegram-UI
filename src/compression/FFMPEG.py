@@ -1,36 +1,22 @@
-from ctypes import c_int64
-import json
 import os
-import re
 import shutil
 import subprocess
-from threading import Thread
-import time
 from typing import List
 import zipfile
 import click
-import tempfile
-from file_manager.file_manager_utils import FileManager_Utils
-
-from typing import TYPE_CHECKING
-
 import requests
 
 # Import constants from config
 from config import FFMPEG_RELATIVE_PATH, FFPROBE_RELATIVE_PATH
-from file_types.file import File
-
-if TYPE_CHECKING:
-    from file_types.video import Video
-    from file_types.image import Image
 
 class FFMPEG():
     """
-    FFMPEG class for handle ffmpeg and ffprobe commands
+    Class responsible for ensuring ffmpeg is installed and providing methods to call ffmpeg and 
+    ffprobe commands
     """
     
     @staticmethod
-    def ensure_ffmpeg():
+    def ensure_ffmpeg() -> None:
         """
         Ensure ffmpeg is installed, if not download and install it
         
@@ -39,42 +25,90 @@ class FFMPEG():
         
         TODO I can add a simple file version check to see if ffmpeg is up to date
         """
-        # Check if ffmpeg folder exists
-        if not os.path.exists(FFMPEG_RELATIVE_PATH):
+        # Determine whether installation/update is needed: require all three executables
+        ffplay_rel = os.path.join(os.path.dirname(FFMPEG_RELATIVE_PATH), 'ffplay.exe')
+        need_install = not (
+            os.path.exists(FFMPEG_RELATIVE_PATH) and 
+            os.path.exists(FFPROBE_RELATIVE_PATH) and 
+            os.path.exists(ffplay_rel)
+        )
+
+        # Check if ffmpeg folder exists or needs update
+        if need_install:
             # Download and install ffmpeg
             print("Downloading ffmpeg...")
-            os.makedirs(os.path.dirname(FFMPEG_RELATIVE_PATH), exist_ok=True)
 
-            # Download zip
-            url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-            r = requests.get(url, stream=True)
+            target_dir = os.path.dirname(FFMPEG_RELATIVE_PATH)
+            target_dir_abs = os.path.abspath(target_dir)
+            dir_preexisting = os.path.exists(target_dir_abs)
+            os.makedirs(target_dir_abs, exist_ok=True)
+
             zip_path = "ffmpeg.zip"
-            with open(zip_path, "wb") as f:
-                f.write(r.content)
+            temp_extract_dir = "ffmpeg_temp"
+            try:
+                # Download zip
+                url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+                r = requests.get(url, stream=True)
+                with open(zip_path, "wb") as f:
+                    f.write(r.content)
 
-            # Extract zip
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall("ffmpeg_temp")
+                # Extract zip
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(temp_extract_dir)
 
-            # Find the bin folder dynamically
-            bin_folder = None
-            for root, dirs, files in os.walk("ffmpeg_temp"):
-                if "ffmpeg.exe" in files:
-                    bin_folder = root
-                    break
+                # Find the bin folder dynamically
+                bin_folder = None
+                for root, dirs, files in os.walk(temp_extract_dir):
+                    if "ffmpeg.exe" in files:
+                        bin_folder = root
+                        break
 
-            if not bin_folder:
-                raise FileNotFoundError("Could not find ffmpeg.exe in the extracted zip!")
+                if not bin_folder:
+                    raise Exception("Expected ffmpeg executables not found in the zip")
 
-            # Move binaries to 'ffmpeg' folder
-            for exe in ["ffmpeg.exe", "ffprobe.exe", "ffplay.exe"]:
-                shutil.move(os.path.join(bin_folder, exe), os.path.join(os.path.dirname(FFMPEG_RELATIVE_PATH), exe))
+                # Move binaries to target 'ffmpeg' folder
+                for exe in ["ffmpeg.exe", "ffprobe.exe", "ffplay.exe"]:
+                    shutil.move(os.path.join(bin_folder, exe), os.path.join(target_dir_abs, exe))
 
-            # Cleanup
-            shutil.rmtree("ffmpeg_temp")
-            os.remove(zip_path)
+                # Cleanup
+                shutil.rmtree(temp_extract_dir)
+                os.remove(zip_path)
 
-            print("ffmpeg installed successfully.")
+                print("ffmpeg installed successfully.")
+            except Exception:
+                # Best-effort cleanup of partial artifacts
+                try:
+                    if os.path.exists(zip_path):
+                        os.remove(zip_path)
+                except Exception:
+                    pass
+                try:
+                    if os.path.exists(temp_extract_dir):
+                        shutil.rmtree(temp_extract_dir)
+                except Exception:
+                    pass
+                # Remove target dir only if it did not exist before we ran
+                try:
+                    if not dir_preexisting and os.path.exists(target_dir_abs):
+                        # Attempt to remove known binaries first (best-effort)
+                        for exe in ["ffmpeg.exe", "ffprobe.exe", "ffplay.exe"]:
+                            try:
+                                p = os.path.join(target_dir_abs, exe)
+                                if os.path.exists(p):
+                                    os.remove(p)
+                            except Exception:
+                                pass
+                        try:
+                            shutil.rmtree(target_dir_abs)
+                        except Exception:
+                            # Final attempt: remove directory if empty
+                            try:
+                                os.rmdir(target_dir_abs)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+                raise
         
     @classmethod
     def __get_command_path(self, exe_path_json : str, exe_name : str) -> str:
@@ -114,7 +148,7 @@ class FFMPEG():
         return resultPath
 
     @classmethod
-    def call_ffmpeg(self, args : List[str]):
+    def call_ffmpeg(self, args : List[str]) -> subprocess.Popen:
         """
         Function for execute a ffmpeg command
         
@@ -132,7 +166,7 @@ class FFMPEG():
             raise Exception('ffmpeg command is not available. Thumbnails for videos are not available!')
     
     @classmethod
-    def call_ffprobe(self, args : List[str]):
+    def call_ffprobe(self, args : List[str]) -> subprocess.Popen:
         """
         Function for execute a ffprobe command
         
@@ -148,123 +182,17 @@ class FFMPEG():
             return subprocess.Popen(ffprobeScript, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except FileNotFoundError:
             raise Exception('ffprobe command is not available. Thumbnails for videos are not available!')
-
-    @classmethod
-    def get_ffprobe_file_details(self, video : 'Video'):
-        """
-        Get the file details using ffprobe
-        
-        NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
-        a string for the type hint
-
-        Args:
-            video: The video file
-        Returns:
-            dict: The details of the file
-        """
-        # ffprobe call for get the file info as json
-        p = self.call_ffprobe([
-            '-print_format', 'json',
-            '-show_format',
-            '-show_streams',
-            video.path
-        ])
-        jsonResult = json.loads(p.communicate()[0].decode('utf-8'))
-
-        # Format the result
-        streams = []
-        # Save the information i need
-        for s in jsonResult['streams']:
-            stream = {}
-            stream["index"] = s['index']
-            if 'codec_name' in s:
-                stream["codec_name"] = s['codec_name']
-            if 'codec_long_name' in s:
-                stream["codec_long_name"] = s['codec_long_name']
-            if 'codec_type' in s:
-                stream["codec_type"] = s['codec_type']
-            if 'codec_tag_string' in s:
-                stream["codec_tag_string"] = s['codec_tag_string']
-            if 'duration' in s:
-                stream["duration"] = s['duration']
-            if 'bit_rate' in s:
-                stream["bit_rate"] = s['bit_rate']
-            if 'tags' in s:
-                if 'creation_time' in s['tags']:
-                    stream["creation_time"] = s['tags']['creation_time']
-
-            # Only video info
-            if 'width' in s:
-                stream["width"] = s['width']
-            if 'height' in s:
-                stream["height"] = s['height']
-            if 'display_aspect_ratio' in s:
-                stream["display_aspect_ratio"] = s['display_aspect_ratio']
-            if 'r_frame_rate' in s:
-                stream["r_frame_rate"] = s['r_frame_rate']
-            if 'avg_frame_rate' in s:
-                stream["avg_frame_rate"] = s['avg_frame_rate']
-            if 'bits_per_raw_sample' in s:
-                stream["bits_per_raw_sample"] = s['bits_per_raw_sample']
-
-            # Only audio info
-            if 'sample_fmt' in s:
-                stream["sample_fmt"] = s['sample_fmt']
-            if 'sample_rate' in s:
-                stream["sample_rate"] = s['sample_rate']
-
-            # Only image info
-            if 'pix_fmt' in s:
-                stream["pix_fmt"] = s['pix_fmt']
-            if 'color_range' in s:
-                stream["color_range"] = s['color_range']
-            if 'color_space' in s:
-                stream["color_space"] = s['color_space']
-            if 'chroma_location' in s:
-                stream["chroma_location"] = s['chroma_location']
-
-            # Add stream to streams list
-            streams.append(stream)
-
-        format = {}
-        if 'format' in jsonResult:
-            if 'filename' in jsonResult['format']:
-                format["filename"] = jsonResult['format']['filename']
-
-            # Only image info
-            if 'format_name' in jsonResult['format']:
-                format["format_name"] = jsonResult['format']['format_name']
-            if 'format_long_name' in jsonResult['format']:
-                format["format_long_name"] = jsonResult['format']['format_long_name']
-
-            if 'size' in jsonResult['format']:
-                format["size"] = jsonResult['format']['size']
-            if 'bit_rate' in jsonResult['format']:
-                format["bit_rate"] = jsonResult['format']['bit_rate']
-            if 'tags' in jsonResult['format']:
-                if 'major_brand' in jsonResult['format']:
-                    format["major_brand"] = jsonResult['format']['tags']['major_brand']
-                if 'creation_time' in jsonResult['format']:
-                    format["creation_time"] = jsonResult['format']['tags']['creation_time']
-
-        result = {
-            "streams": streams,
-            "format": format
-        }
-        return result
     
+    '''
     @classmethod
-    def ffmpeg_progress_bar(self, video : 'Video', process, tot_n_frames : int):
+    def ffmpeg_progress_bar(self, file : File, process, tot_n_frames : int):
         """
         Create the ffmpeg progress bar
 
         This is different from the normal progress bar as i use a thread for read the value from the process
             
-        NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
-        a string for the type hint
-        
         Args:
-            video: The video file
+            file: The file object
             process: The ffmpeg process
             tot_n_frames: The total number of frames        
         """
@@ -296,7 +224,7 @@ class FFMPEG():
                     # Store the last sample
                     q[0] = frame
 
-        def progress_bar_execution(action, video : 'Video', p, q, tot_n_frames : int, update_time_s : float = 1):
+        def progress_bar_execution(action, file : File, p, q, tot_n_frames : int, update_time_s : float = 1):
             """
             Execute the ffmpeg progress loop that updates every `update_time_s` seconds.
 
@@ -320,13 +248,13 @@ class FFMPEG():
 
                 # Try GUI progress first, otherwise fallback to console
                 try:
-                    FileManager_Utils.progress(n_frame, tot_n_frames, f"{action} {video.file_name}")
+                    FileManager_Utils.progress(n_frame, tot_n_frames, f"{action} {file.file_name}")
                 except Exception:
                     try:
                         pct = (n_frame / tot_n_frames) * 100 if tot_n_frames else 0.0
                     except Exception:
                         pct = 0.0
-                    print(f"{pct:.2f}% {action} {video.file_name}")
+                    print(f"{pct:.2f}% {action} {file.file_name}")
 
         q = [0]
 
@@ -336,72 +264,6 @@ class FFMPEG():
         progress_reader_thread.start()
         
         # Execute the progress bar
-        progress_bar_execution("Compressing video", video, process, q, tot_n_frames)
-    
-    def get_video_resolution(video : 'Video'):
-        """
-        Get the video resolution using ffprobe
-            
-        NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
-        a string for the type hint
+        progress_bar_execution("Compressing file", file, process, q, tot_n_frames)
         
-        Args:
-            video: The video file
-        Returns:
-            List[int]: The video resolution [width, height]
-        """
-        
-        p = FFMPEG.call_ffmpeg([
-            '-i', video.path,
-        ])
-        stdout, stderr = p.communicate()
-        video_lines = re.findall(': Video: ([^\n]+)', stdout)
-        
-        if not video_lines:
-            return
-        
-        matchs = re.findall("(\d{2,6})x(\d{2,6})", video_lines[0])
-        if matchs:
-            return [int(x) for x in matchs[0]]
-
-    def extract_frame_from_video(video: 'Video', time: float = 0.0) -> 'Image':
-        """
-        Extract a single frame from video data (bytes) at the given time (seconds).
-
-        Returns the image as bytes (JPEG). Raises Exception on failure.
-        """
-        # Build ffmpeg command to write a single jpeg frame to a temporary file,
-        # then read the file bytes and delete the temporary file.
-        ffmpeg_path = FFMPEG.__get_command_path("FFMPEG", FFMPEG_RELATIVE_PATH)
-
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
-        tmp_path = tmp.name
-        tmp.close()
-
-        # Scale to cover 320x320 (scale up/down preserving aspect) then center-crop to exactly 320x320
-        # Use 'increase' (supported) instead of 'cover'
-        vf_filter = 'scale=320:320:force_original_aspect_ratio=increase,crop=320:320'
-        cmd = [
-            ffmpeg_path,
-            '-hide_banner', '-loglevel', 'error',
-            '-ss', str(time),
-            '-i', video.path,
-            '-vf', vf_filter,
-            '-frames:v', '1',
-            '-q:v', '2',
-            '-y',
-            tmp_path
-        ]
-
-        try:
-            p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = p.communicate()
-            if p.returncode != 0:
-                stderr_text = err.decode('utf-8', errors='ignore') if isinstance(err, (bytes, bytearray)) else str(err)
-                raise Exception(f'ffmpeg command failed with error: {stderr_text}')
-
-            return File(tmp_path)
-        except FileNotFoundError:
-            raise Exception('ffmpeg command is not available. Thumbnails for videos are not available!')
-        
-        
+        '''

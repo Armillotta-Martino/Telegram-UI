@@ -3,19 +3,23 @@ import hashlib
 import os
 import click
 
-from typing import Optional, Callable, Union
+from typing import Optional
+
+from telethon import utils, helpers, custom, hints
+from telethon.errors import InvalidBufferError
+from telethon.tl import types, TLRequest, functions
 
 from config import MAX_RECONNECT_RETRIES, MIN_RECONNECT_WAIT, PARALLEL_UPLOAD_BLOCKS, PART_MAX_SIZE, SMALL_FILE_THRESHOLD
 from file_manager.file_manager_utils import FileManager_Utils
 from file_types.file import File
 from telegram.telegram_manager_client import TelegramManagerClient
 
-from telethon import utils, helpers, custom, hints
-from telethon.errors import InvalidBufferError
-from telethon.tl import types, TLRequest, functions
-
-
 class FileManager_Upload_Utils:
+    """
+    Utility class for uploading files to Telegram servers. This class provides methods to upload 
+    file data in parts, handling the necessary logic for both small and big files, as well as 
+    retrying uploads in case of connection errors
+    """
 
     @staticmethod
     async def upload_file_data(
@@ -26,7 +30,7 @@ class FileManager_Upload_Utils:
         file_output_size: int = None,
         file_output_path: str = None,
         progress_callback: Optional['hints.ProgressCallback'] = None
-        ):
+        ) -> types.InputFile | types.InputFileBig:
         """
         Upload a file data to Telegram servers in parts
         
@@ -198,7 +202,7 @@ class FileManager_Upload_Utils:
         ) -> None:
         """
         Submit the file request part to Telegram. This method waits for the request to be executed, logs the upload,
-        and releases the semaphore to allow further uploading.
+        and releases the semaphore to allow further uploading
         
         Args:
             client: Telegram manager client

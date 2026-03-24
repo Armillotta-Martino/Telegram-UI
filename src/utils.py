@@ -3,6 +3,8 @@ import re
 import shutil
 import json
 
+import click
+
 def free_disk_usage(directory : str = '.') -> int:
     """
     Get the free disk usage in bytes
@@ -94,3 +96,27 @@ def get_environment_value(environment_name: str, default_value):
         raise Exception(
             f"Environment variable {environment_name} must be of type {target_type.__name__}, got '{raw_value}'"
         ) from e
+        
+def prompt_config(config_file : str) -> str:
+    """
+    Create the file in the directory and write the API config
+    
+    Args:
+        config_file: Path to the config file
+    Returns:
+        The config file path
+    """
+    # Create the dir
+    os.makedirs(os.path.dirname(config_file), exist_ok=True)
+    click.echo('Go to https://my.telegram.org and create a App in API development tools')
+    # Telegram API id
+    api_id = click.prompt('Please Enter api_id', type=int)
+    # Telegram API hash
+    api_hash = click.prompt('Now enter api_hash')
+
+    # Save the values on the json
+    with open(config_file, 'w') as f:
+        json.dump({'api_id': api_id, 'api_hash': api_hash}, f)
+
+    # Return the config file path
+    return config_file

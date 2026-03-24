@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 from xml.dom.minidom import Entity
 
-from dbJson.file_message import FileMessage
 from file_manager.file_manager_main import FileManager
 from compression.FFMPEG import FFMPEG
 from file_types.file import File
@@ -30,7 +29,7 @@ app_running = True
 sync_panel = None
 
 # === Telegram async initializer ===
-async def init():
+async def init() -> None:
     """
     Initialize the Telegram client, fetch dialogs and set up the initial file browser pane
     """
@@ -59,40 +58,49 @@ async def init():
     except Exception:
         pass
     
-async def _get_chat_instance():
+async def _get_chat_instance() -> Entity:
     """
     Get the target chat entity instance
+    
+    The function caches the chat instance in a global variable after the first fetch to avoid multiple calls to Telegram for the same entity
+        
+    Returns:
+        Entity: the Telegram entity instance of the target chat (channel/group/user) specified by CHANNEL_NAME in the config
     """
+    # Use the global variable to cache the chat instance after the first fetch
     global target_chat_instance
     
+    # If the chat instance is not cached, fetch it from Telegram using the channel name
     if target_chat_instance is None:
         target_chat_instance = await client.get_entity(CHANNEL_NAME)
+    
+    # Return the cached chat instance
     return target_chat_instance
 
 
 
 #region Buttons UI Handlers
 
-def _choose_file():
+def _choose_file() -> File:
     """
     Open a file dialog to let the user choose a file
     """
     return File(filedialog.askopenfilename())
 
-def _choose_folder():
+def _choose_folder() -> str:
     """
     Open a file dialog to let the user choose a folder
     """
     return filedialog.askdirectory()
 
-def create_folder_UI():
+def create_folder_UI() -> None:
     """
     Create a new folder in the current position of the file browser pane
     
     This is the UI handler that wraps the async function
     """
     loop.create_task(_create_folder_UI())
-async def _create_folder_UI():
+async def _create_folder_UI() -> None:
     """
     Create a new folder in the current position of the file browser pane
     """
@@ -119,7 +127,7 @@ async def _create_folder_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
         
-def upload_file_UI():
+def upload_file_UI() -> None:
     """
     Upload a file to the current position of the file browser pane
 
@@ -127,7 +135,7 @@ def upload_file_UI():
     """
     loop.create_task(_upload_file_UI())
     return
-async def _upload_file_UI():
+async def _upload_file_UI() -> None:
     """
     Upload a file to the current position of the file browser pane
     """
@@ -150,7 +158,7 @@ async def _upload_file_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
         
-def download_file_UI():
+def download_file_UI() -> None:
     """
     Download a file from the selected file in the file browser pane
 
@@ -158,7 +166,7 @@ def download_file_UI():
     """
     loop.create_task(_download_file_UI())
     return
-async def _download_file_UI():
+async def _download_file_UI() -> None:
     """
     Download a file from the selected file in the file browser pane
     """
@@ -177,36 +185,15 @@ async def _download_file_UI():
         await file_browser_pane.render_current_folder(client)
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
-def see_preview_UI():
-    """
-    See a preview of the selected file in the file browser pane
-
-    This is the UI handler that wraps the async function
-    """
-    loop.create_task(_see_preview_UI())
-    return
-async def _see_preview_UI():
-    """
-    See a preview of the selected file in the file browser pane
-    """
-    global file_browser_pane
-    global client
-    
-    try:
-        # TODO
-        pass
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
        
-def back_UI():
+def back_UI() -> None:
     """
     Go back to the previous folder in the file browser pane
     
     This is the UI handler that wraps the async function
     """
     loop.create_task(_back_UI())
-async def _back_UI():
+async def _back_UI() -> None:
     """
     Go back to the previous folder in the file browser pane
     """
@@ -218,14 +205,14 @@ async def _back_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
-def rename_UI():
+def rename_UI() -> None:
     """
     Rename the selected file in the file browser pane
 
     This is the UI handler that wraps the async function
     """
     loop.create_task(_rename_UI())
-async def _rename_UI():
+async def _rename_UI() -> None:
     """
     Rename the selected file in the file browser pane
     """
@@ -253,14 +240,14 @@ async def _rename_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
-def delete_UI():
+def delete_UI() -> None:
     """
     Delete the selected file in the file browser pane
     
     This is the UI handler that wraps the async function
     """
     loop.create_task(_delete_UI())
-async def _delete_UI():
+async def _delete_UI() -> None:
     """
     Delete the selected file in the file browser pane
     """
@@ -280,14 +267,14 @@ async def _delete_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
         
-def open_preview_UI():
+def open_preview_UI() -> None:
     """
     Open a preview of the selected file in the file browser pane
     
     This is the UI handler that wraps the async function
     """
     loop.create_task(_open_preview_UI())
-async def _open_preview_UI():
+async def _open_preview_UI() -> None:
     """
     Open a preview of the selected file in the file browser pane
     """
@@ -307,14 +294,14 @@ async def _open_preview_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
 
-def move_UI():
+def move_UI() -> None:
     """
     Move the selected file in the file browser pane
 
     This is the UI handler that wraps the async function
     """
     loop.create_task(_move_UI())
-async def _move_UI():
+async def _move_UI() -> None:
     """
     Move the selected file in the file browser pane
     """
@@ -360,14 +347,14 @@ async def _move_UI():
     except Exception as e:
         messagebox.showerror("Error", str(e))
     
-def sync_UI():
+def sync_UI() -> None:
     """
     Sync the current folder in the file browser pane
 
     This is the UI handler that wraps the async function
     """
     loop.create_task(_sync_UI())
-async def _sync_UI():
+async def _sync_UI() -> None:
     """
     Sync the current folder in the file browser pane
     """
@@ -394,9 +381,13 @@ root = tk.Tk()
 root.title("Telegram Uploader")
 root.geometry("800x500")
 
-# Window close handler: stop background routines and persist state
-def on_close():
+def on_close() -> None:
+    """
+    Window close handler: stop background routines and persist state
+    """
     global app_running
+    
+    # Set the running flag to false to stop background loops
     app_running = False
     try:
         if sync_panel:
@@ -437,15 +428,19 @@ loop = asyncio.get_event_loop()
 # Instantiate Sync Jobs panel
 sync_panel = SyncJobsPanel(frame, loop, client)
 
-async def wait_window_async(win: tk.Toplevel):
+async def wait_window_async(win: tk.Toplevel) -> None:
     """
     Asynchronously wait for a Tk `Toplevel` window to close without blocking the asyncio loop.
 
     The function returns when the window is destroyed or its WM_DELETE_WINDOW is invoked.
     """
+    # Create a future that will be set when the window is closed
     future = loop.create_future()
 
-    def _on_close(*_):
+    def _on_close(*_) -> None:
+        """
+        Stop the event loop when the window is closed, either by the user or programmatically
+        """
         if not future.done():
             future.set_result(None)
 
@@ -456,10 +451,15 @@ async def wait_window_async(win: tk.Toplevel):
 
     # If the toplevel itself is destroyed, fire the future.
     # Ignore Destroy events coming from child widgets (they bubble up).
-    def _on_destroy(event=None):
+    def _on_destroy(event=None) -> None:
+        """
+        Handle the destroy event for the toplevel window and set the future result to unblock the waiting coroutine
+        """
+
         if event is None:
             _on_close()
             return
+        
         # Only react when the event's widget is the toplevel itself
         try:
             if event.widget is not win:
@@ -477,7 +477,7 @@ async def wait_window_async(win: tk.Toplevel):
     await future
 
 # Run the event loop in background
-async def main_async():
+async def main_async() -> None:
     """
     Main async function to initialize the Telegram client and keep the loop running
     """
@@ -494,7 +494,7 @@ async def main_async():
     while app_running:
         await asyncio.sleep(0.1)
 
-def run_app():
+def run_app() -> None:
     """
     Run the Tkinter application with the asyncio event loop
     """
@@ -525,7 +525,7 @@ def run_app():
         except Exception:
             pass
 
-async def run_tk():
+async def run_tk() -> None:
     """
     Run the Tkinter main loop asynchronously
     """

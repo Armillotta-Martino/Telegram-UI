@@ -5,35 +5,32 @@ import os
 import sys
 import tempfile
 import threading
-import http.server
-import socketserver
-import webbrowser
-import urllib.parse
-import mimetypes
-import time
-import socket
 import subprocess
-from tkinter import Tk
-from typing import Generator, Dict, Optional, Set
+from typing import Dict, Optional
 from xml.dom.minidom import Entity
 
+# Telethon imports
 from telethon import TelegramClient
 from telethon.tl.types import InputMessagesFilterPinned
 
+# Import DbJson
 from dbJson.file_message import FileMessage, FileMessageType
+
 from file_manager.download.file_manager_download import FileManager_Download
 from file_manager.file_manager_utils import FileManager_Utils
 from file_manager.upload.file_manager_upload import FileManager_Upload
-from file_types.file import File
 from telegram.telegram_manager_client import TelegramManagerClient
 
+# Import File types
+from file_types.file import File
+
 class FileManager():
-    
-    '''
-    Actions region
-    
-    This region contains all the functions to execute actions (create folder, upload file, move, rename, delete, etc...)
-    '''
+    """
+    FileManager is the main class that handles the file management operations in the Telegram chat. 
+    It provides methods to create folders, upload files, download files, move files and folders, 
+    rename files and folders, open file previews, delete files and folders, and sync a local folder 
+    with a Telegram folder
+    """
     
     @classmethod
     async def get_root(
@@ -185,15 +182,15 @@ class FileManager():
         chat_instance : Entity, 
         message : FileMessage, 
         new_parent_message : FileMessage
-        ):
+        ) -> None:
         """
         Move a file or a folder
 
         Args:
-            client (TelegramClient): _description_
-            chat_instance (Entity): _description_
-            message (Message): _description_
-            new_parent_message (Message): _description_
+            client (TelegramClient): The Telegram client to use
+            chat_instance (Entity): The chat instance to use
+            message (Message): The message to move
+            new_parent_message (Message): The new parent message to move the message into
         """
         # Update
         await message.refresh(client, chat_instance)
@@ -228,7 +225,7 @@ class FileManager():
         chat_instance : Entity, 
         message : FileMessage, 
         new_name : str
-        ):
+        ) -> None:
         """
         Rename a file or a folder
         
@@ -257,7 +254,7 @@ class FileManager():
         client : TelegramClient, 
         chat_instance : Entity, 
         message : FileMessage
-        ):
+        ) -> None:
         """
         Open a preview of a file or a folder
         
@@ -385,14 +382,13 @@ class FileManager():
                 except Exception as e:
                     print('Failed to open player:', e)
                 
-        
     @classmethod
     async def delete(
         self, 
         client : TelegramClient, 
         chat_instance : Entity, 
         message : FileMessage
-        ):
+        ) -> None:
         """
         Delete a file or a folder
         
@@ -440,7 +436,7 @@ class FileManager():
         chat_instance : Entity, 
         folder : str,
         current_position : FileMessage
-        ):
+        ) -> None:
         """
         Delete a file or a folder
         

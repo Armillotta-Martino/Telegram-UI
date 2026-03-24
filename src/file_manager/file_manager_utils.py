@@ -2,20 +2,24 @@ import asyncio
 import json
 from xml.dom.minidom import Entity
 import click
+
 from config import RECONNECT_TIMEOUT
 from dbJson.file_message import FileMessage
 from telegram.telegram_manager_client import TelegramManagerClient
+
 from ui.pop_up_progress_bar import PopUp_Progress_Bar
 
-
 class FileManager_Utils:
+    """
+    Utility functions for the file manager
+    """
     
     @staticmethod
     async def reconnect(
         client : TelegramManagerClient, 
         reconnecting_lock : asyncio.Lock, 
         upload_semaphore : asyncio.Semaphore
-        ):
+        ) -> None:
         """
         Reconnects to Telegram servers
         
@@ -95,7 +99,8 @@ class FileManager_Utils:
     def progress(
         sent : int, 
         total : int, 
-        text: str = "") -> None:
+        text: str = ""
+        ) -> None:
         """
         Callback function to show the progress
         

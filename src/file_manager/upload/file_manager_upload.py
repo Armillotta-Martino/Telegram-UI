@@ -1,16 +1,26 @@
 import functools
 import json
 from xml.dom.minidom import Entity
+
+# Import DbJson
 from dbJson.file_message import FileMessage, FileMessageType
+
 from file_manager.file_manager_utils import FileManager_Utils
 from file_manager.upload.file_manager_upload_utils import FileManager_Upload_Utils
 from file_manager.upload.file_manager_upload_video import FileManager_Upload_Video
-from file_types.file import File
-from file_types.video import Video
 from telegram.telegram_manager_client import TelegramManagerClient
 
+# Import file types
+from file_types.file import File
+from file_types.video import Video
 
 class FileManager_Upload:
+    """
+    Class responsible for handling file uploads to Telegram, including generic files and videos. 
+    It provides methods to upload files to a specified chat and parent folder, ensuring that the 
+    parent is a valid folder before proceeding with the upload. The class also includes a helper 
+    method for uploading generic files as comments to the parent message
+    """
     
     @staticmethod
     async def upload_file(
@@ -92,7 +102,7 @@ class FileManager_Upload:
         chat_instance : Entity, 
         file : File, 
         message : FileMessage
-        ):
+        ) -> None:
         """
         Upload a generic file to Telegram as a comment to the specified message
         

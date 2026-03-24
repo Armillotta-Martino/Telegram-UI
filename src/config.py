@@ -1,7 +1,3 @@
-import json
-import os
-import click
-
 from dotenv import load_dotenv
 
 # Reads .env and sets environment variables
@@ -114,33 +110,3 @@ PREMIUM_USER_MAX_CAPTION_LENGTH = 2 * 1024
 ALBUM_FILES = 10
 # Number of retries for upload
 RETRIES = 3
-
-# -------------------------------------
-# Inputs
-# Inputs the user has to insert
-# TODO Maybe move to env
-# -------------------------------------
-
-def prompt_config(config_file : str) -> str:
-    """
-    Create the file in the directory and write the API config
-    
-    Args:
-        config_file: Path to the config file
-    Returns:
-        The config file path
-    """
-    # Create the dir
-    os.makedirs(os.path.dirname(config_file), exist_ok=True)
-    click.echo('Go to https://my.telegram.org and create a App in API development tools')
-    # Telegram API id
-    api_id = click.prompt('Please Enter api_id', type=int)
-    # Telegram API hash
-    api_hash = click.prompt('Now enter api_hash')
-
-    # Save the values on the json
-    with open(config_file, 'w') as f:
-        json.dump({'api_id': api_id, 'api_hash': api_hash}, f)
-
-    # Return the config file path
-    return config_file
