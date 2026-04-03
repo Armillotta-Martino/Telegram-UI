@@ -61,6 +61,9 @@ class FileManager_Upload_Video:
         )
         '''
         
+        if message.is_folder:
+            raise Exception("Cannot upload a video to a folder message")
+        
         ### Thumbnail
         
         # Generate and upload the thumbnail for the video
