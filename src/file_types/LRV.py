@@ -14,7 +14,7 @@ class LRV():
     """
     
     @classmethod
-    def generate_video_low_resolution(self, video : Video, width : int = -1, height=360) -> File:
+    def generate_video_low_resolution(self, video : Video, width : int = -1, height=360) -> Video | None:
         """
         Calculate the low resolution video for the given video file
 
@@ -22,11 +22,11 @@ class LRV():
         In the future i can increase the crf value or make it "dynamic" (scale by a dividend)
         
         Args:
-            video: Video file to create the LRV file
-            width: Width of the LRV video. If -1 it will be calculated with the aspect ratio
-            height: Height of the LRV video. If -1 it will be calculated with the aspect ratio
+            video (Video): Video file to create the LRV file
+            width (int): Width of the LRV video. If -1 it will be calculated with the aspect ratio
+            height (int): Height of the LRV video. If -1 it will be calculated with the aspect ratio
         Returns:
-            File: LRV video file
+            Video | None: The LRV video file, or None if the LRV video file could not be created
         Raises:
             Exception: If the video ratio is not available
         """
@@ -85,10 +85,8 @@ class LRV():
             output_path,
         ])
         
-        # Get the total frame count
-        tot_n_frames = video.get_total_frames_count()
         # Display the progress bar
-        FFMPEG.ffmpeg_progress_bar(video, p, tot_n_frames)
+        FFMPEG.ffmpeg_progress_bar(video.file_name, p, int(video.length_seconds))
         
         # NOTE: I removed this part because if i keep it as a MP4 file, the Telegram video players can play it
         # Change the file extension to LRV (low resolution video, as GoPro do)
@@ -99,4 +97,6 @@ class LRV():
 
         # Return the LRV file path
         if not p.returncode and os.path.lexists(video.path):
-            return File(output_path)
+            return Video(File(output_path))
+        
+        return None

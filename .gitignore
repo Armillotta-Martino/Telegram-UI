@@ -218,3 +218,6 @@ samples/*
 
 # Remove the sync_jobs.json file as it may contain sensitive data and is not needed for the functioning of the application
 sync_jobs.json
+
+# Ignore test files as they are downloaded from tests on run time
+test_files/

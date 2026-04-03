@@ -9,16 +9,25 @@ class File(FileIO):
     A class that represent a generic file
     """
     
-    def __init__(self, path, force_document : bool = False) -> None:
+    def __init__(self, path: str, force_document : bool = False) -> None:
         """
         Constructor
         
         Args:
-            path: The file path
-            force_document: Whether to force the file to be treated as a document
+            path (str): The file path
+            force_document (bool): Whether to force the file to be treated as a document
+        Returns:
+            None
         Raises:
             ValueError: If the file is not valid
         """
+        
+        if not os.path.lexists(path):
+            raise FileNotFoundError('File "{}" does not exist.'.format(path))
+        
+        if os.path.isdir(path):
+            raise ValueError('The path "{}" is a directory, not a file.'.format(path))
+        
         # Store the path and force_document
         self.path = path
         self.force_document = force_document
@@ -26,8 +35,7 @@ class File(FileIO):
         super().__init__(path, mode='rb')
         
         # Check if the file is valid
-        if not self.__is_valid_file():
-            raise ValueError('File "{}" is not valid.'.format(self.path))
+        self.__is_valid_file()
 
     @property
     def file_name(self) -> str:
@@ -72,7 +80,7 @@ class File(FileIO):
         with open(self.path, 'rb') as f:
             return f.read()
         
-    def __is_valid_file(self, error_logger=None) -> bool:
+    def __is_valid_file(self, error_logger: callable = None) -> bool:
         """
         Check if the file is valid
             
@@ -81,7 +89,7 @@ class File(FileIO):
         - The file size is greater than 0 bytes
         
         Args:
-            error_logger: A callable to log errors
+            error_logger (callable, optional): A callable to log errors
         Returns:
             bool: Whether the file is valid
         """
@@ -99,9 +107,12 @@ class File(FileIO):
         # Log error if needed
         if error_message and error_logger is not None:
             error_logger(error_message)
+        
+        if error_message:    
+            raise ValueError(error_message)
             
         # Return validity
-        return error_message is None
+        return True
     
     def get_mime(self) -> str:
         """
@@ -111,19 +122,16 @@ class File(FileIO):
         """
         return (mimetypes.guess_type(self.path)[0] or ('')).split('/')[0]
     
-    def seek(self, offset: int, whence: int = SEEK_SET, split_seek: bool = False) -> int:
+    def seek(self, offset: int, whence: int = SEEK_SET) -> int:
         """
         Seek to a specific position in the file
             
         This is used to go to a specific position in a file
         
         Args:
-            offset: Initial offset
-            whence: FILEIO whence value
-            split_seek: Whether to use split seek (used for splitted files)
+            offset (int): Initial offset
+            whence (int, optional): FILEIO whence value
         Returns:
             int: New position
         """
-        if not split_seek:
-            self.remaining_size += self.tell() - offset
         return super().seek(offset, whence)

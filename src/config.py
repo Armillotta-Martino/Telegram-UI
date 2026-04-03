@@ -3,27 +3,27 @@ from dotenv import load_dotenv
 # Reads .env and sets environment variables
 load_dotenv()
 
-from utils import get_environment_value
+from utils import Utils
 
 ### Required Telegram Configurations
 # Telegram channel name where to upload the files
-CHANNEL_NAME = get_environment_value('TELEGRAM_UPLOAD_CHANNEL_NAME', '')
+CHANNEL_NAME = Utils.get_environment_value('TELEGRAM_UPLOAD_CHANNEL_NAME', '')
 # Telegram API ID and Hash
-API_ID = get_environment_value('TELEGRAM_UPLOAD_API_ID', -1)
+API_ID = Utils.get_environment_value('TELEGRAM_UPLOAD_API_ID', -1)
 # Telegram API Hash
-API_HASH = get_environment_value('TELEGRAM_UPLOAD_API_HASH', '')
+API_HASH = Utils.get_environment_value('TELEGRAM_UPLOAD_API_HASH', '')
 
 ### Optional Telegram Configurations
 # Number of parallel upload blocks
-PARALLEL_UPLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 4)
+PARALLEL_UPLOAD_BLOCKS = Utils.get_environment_value('TELEGRAM_UPLOAD_PARALLEL_UPLOAD_BLOCKS', 4)
 # Number of parallel download blocks
-PARALLEL_DOWNLOAD_BLOCKS = get_environment_value('TELEGRAM_UPLOAD_PARALLEL_DOWNLOAD_BLOCKS', 10)
+PARALLEL_DOWNLOAD_BLOCKS = Utils.get_environment_value('TELEGRAM_UPLOAD_PARALLEL_DOWNLOAD_BLOCKS', 10)
 # Max number of retries for reconnect
-MAX_RECONNECT_RETRIES = get_environment_value('TELEGRAM_UPLOAD_MAX_RECONNECT_RETRIES', 5)
+MAX_RECONNECT_RETRIES = Utils.get_environment_value('TELEGRAM_UPLOAD_MAX_RECONNECT_RETRIES', 5)
 # Reconnect timeout
-RECONNECT_TIMEOUT = get_environment_value('TELEGRAM_UPLOAD_RECONNECT_TIMEOUT', 5)
+RECONNECT_TIMEOUT = Utils.get_environment_value('TELEGRAM_UPLOAD_RECONNECT_TIMEOUT', 5)
 # Time to wait before retry to connect
-MIN_RECONNECT_WAIT = get_environment_value('TELEGRAM_UPLOAD_MIN_RECONNECT_WAIT', 5)
+MIN_RECONNECT_WAIT = Utils.get_environment_value('TELEGRAM_UPLOAD_MIN_RECONNECT_WAIT', 5)
 
 # I decided to write those values in the env file and other fixed Telegram constants here as constants because
 # the Telegram constants are not going to change often, while the env values can be changed by the user if needed
@@ -59,7 +59,7 @@ Schema explanation:
 Caption:
 {
     "Version": FILE_CAPTION_VERSION,
-    "Type": FileMessageType.ROOT.value,
+    "Type": TelegramMessageType.ROOT.value,
     "Name": file_name,
     "Children": []
 }

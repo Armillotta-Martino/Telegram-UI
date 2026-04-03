@@ -3,7 +3,7 @@ import json
 from xml.dom.minidom import Entity
 
 # Import DbJson
-from dbJson.file_message import FileMessage, FileMessageType
+from dbJson.telegram_message import TelegramMessage, TelegramMessageType
 
 from file_manager.file_manager_utils import FileManager_Utils
 from file_manager.upload.file_manager_upload_utils import FileManager_Upload_Utils
@@ -27,28 +27,24 @@ class FileManager_Upload:
         client : TelegramManagerClient, 
         chat_instance : Entity, 
         file : File, 
-        parent_message : FileMessage
-        ) -> FileMessage:
+        parent_message : TelegramMessage
+        ) -> TelegramMessage:
         """
         Upload a file to the chat under the specified parent folder
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat to upload the file to
-            file: The file to upload
-            parent_message: The parent folder message
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat to upload the file to
+            file (File): The file to upload
+            parent_message (TelegramMessage): The parent folder message
         Returns:
-            FileMessage: The uploaded file message wrapped in a FileMessage object
+            TelegramMessage: The uploaded file message wrapped in a TelegramMessage object
         Raises:
             Exception: If the parent is not a folder
         """
         
         # Check if the parent message is a folder
-        json_data = json.loads(parent_message.telegram_message.message)
-        type_value = json_data.get("Type")
-        
-        # Validate type
-        if type_value != FileMessageType.FOLDER.value and type_value != FileMessageType.ROOT.value:
+        if parent_message.is_folder is False:
             # Raise and exception if the parent is not a folder as only a folder can contain files
             raise Exception("The parent is not a folder")
         
@@ -56,9 +52,9 @@ class FileManager_Upload:
         await parent_message.refresh(client, chat_instance)
         
         # Create the file message
-        data = FileMessage.generate_json_caption(FileMessageType.FILE, file.file_name)
+        data = TelegramMessage.generate_json_caption(TelegramMessageType.FILE, file.file_name)
         # Set the parent
-        data["Parent"] = FileMessage.calculate_message_link(chat_instance, parent_message)
+        data["Parent"] = TelegramMessage.calculate_message_link(chat_instance, parent_message)
         # Send the file message
         message = await FileManager_Utils.send_telegram_message(
             client, 
@@ -90,8 +86,11 @@ class FileManager_Upload:
         await parent_message.add_children(
             client, 
             chat_instance, 
-            FileMessage.calculate_message_link(chat_instance, message)
+            TelegramMessage.calculate_message_link(chat_instance, message)
         )
+        
+        # Refresh the parent message to update the children list
+        await parent_message.refresh(client, chat_instance)
         
         # Return the uploaded file message
         return message
@@ -101,20 +100,22 @@ class FileManager_Upload:
         client : TelegramManagerClient, 
         chat_instance : Entity, 
         file : File, 
-        message : FileMessage
+        message : TelegramMessage
         ) -> None:
         """
         Upload a generic file to Telegram as a comment to the specified message
         
         Args:
-            client: Telegram manager client
-            chat_instance: Chat entity to send the file to
-            file: File to upload
-            message: FileMessage to comment the file to
+            client (TelegramManagerClient): Telegram manager client
+            chat_instance (Entity): Chat entity to send the file to
+            file (File): File to upload
+            message (TelegramMessage): TelegramMessage to comment the file to
+        Returns:
+            None
         """
         
         # File caption for the original video
-        file_caption = FileMessage.generate_json_caption(FileMessageType.FILE, file.file_name)
+        file_caption = TelegramMessage.generate_json_caption(TelegramMessageType.FILE, file.file_name)
         json_file_message = json.dumps(file_caption, indent=4)
         
         # Upload the file data

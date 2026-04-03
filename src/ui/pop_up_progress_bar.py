@@ -17,12 +17,24 @@ class PopUp_Progress_Bar:
     _instance = None
 
     def __init__(self) -> None:
+        """
+        Initializes the progress bar window in a separate thread
+        
+        Returns:
+            None
+        """
         self._q = queue.Queue()
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
     @classmethod
     def instance(cls) -> 'PopUp_Progress_Bar':
+        """
+        Returns the singleton instance of the progress bar, creating it if necessary
+
+        Returns:
+            PopUp_Progress_Bar: The singleton instance of the progress bar
+        """
         # Recreate instance if none exists or thread stopped
         if cls._instance is None:
             cls._instance = cls()
@@ -34,6 +46,12 @@ class PopUp_Progress_Bar:
         return cls._instance
 
     def _run(self) -> None:
+        """
+        Run the progress bar window in a separate thread
+        
+        Returns:
+            None
+        """
         if tk is None:
             # tkinter not available; thread exits quietly
             return
@@ -83,6 +101,12 @@ class PopUp_Progress_Bar:
             pass
 
     def _poll(self) -> None:
+        """
+        Poll the queue for updates and refresh the progress bar and label
+        
+        Returns:
+            None
+        """
         try:
             while True:
                 pct, text = self._q.get_nowait()
@@ -109,12 +133,27 @@ class PopUp_Progress_Bar:
             self.root.after(100, self._poll)
 
     def update(self, pct: float, text: str = '') -> None:
+        """
+        Update the progress bar with a new percentage and optional text
+        
+        Args:
+            pct (float): The new progress percentage (0-100)
+            text (str): Optional text to display alongside the progress percentage
+        Returns:
+            None
+        """
         try:
             self._q.put_nowait((pct, text))
         except Exception:
             pass
 
     def close(self) -> None:
+        """
+        Close the progress bar window and clear the singleton instance
+        
+        Returns:
+            None
+        """
         if tk is None:
             return
         try:
@@ -124,7 +163,12 @@ class PopUp_Progress_Bar:
             pass
 
     def _on_close(self) -> None:
-        """Handle user closing the window: destroy and clear singleton."""
+        """
+        Handle user closing the window: destroy and clear singleton
+        
+        Returns:
+            None
+        """
         try:
             PopUp_Progress_Bar._instance = None
         except Exception:

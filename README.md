@@ -186,7 +186,7 @@ Follow these rules when adding or changing Python code in this repository:
 
 - **Docstring sections:** Use the exact section headers `Args` and `Returns` (capitalized) and list parameters and return values under them.
 
-- **Return type annotation:** Every function and method must include an explicit return type annotation (for example `-> None`, `-> str`, or `-> FileMessage`). Use forward references (strings) or `from __future__ import annotations` when needed to avoid circular import issues.
+- **Return type annotation:** Every function and method must include an explicit return type annotation (for example `-> None`, `-> str`, or `-> TelegramMessage`). Use forward references (strings) or `from __future__ import annotations` when needed to avoid circular import issues.
 
 - **No trailing punctuation:** Do not add a period at the end of short docstring phrases or bullet-like lines.
 

@@ -1,11 +1,9 @@
-from asyncio import subprocess
 import json
-import re
 import tempfile
 
 from hachoir.core import config as hachoir_config
 
-from compression.FFMPEG import FFMPEG, FFMPEG_RELATIVE_PATH
+from compression.FFMPEG import FFMPEG
 from file_types.file import File
 from file_types.image import Image
 
@@ -23,8 +21,10 @@ class Video(File):
         Constructor
         
         Args:
-            file: The file to convert to Video
-            force_file: Force to treat the file as a video even if the mime type is not video
+            file (File): The file to convert to Video
+            force_file (bool, optional): Force to treat the file as a video even if the mime type is not video
+        Returns:
+            None
         """
         # Convert File to Video
         super().__init__(file.path)
@@ -36,69 +36,48 @@ class Video(File):
         
         self.force_file = self.force_file if force_file is None else force_file
     
-    def get_total_frames_count(self) -> int:
+    @property
+    def length_seconds(self) -> float:
         """
-        Get the total number of frames in the video
-        
-        This use ffprobe to get the number of frames
+        Get the video length in seconds
         
         Returns:
-            int: Total number of frames
+            float: The video length in seconds
         """
-        
-        ################################################################################
-        # Execute ffprobe (to show streams), and get the output in JSON format
-        # Actually counts packets instead of frames but it is much faster
-        # https://stackoverflow.com/questions/2017843/fetch-frame-count-with-ffmpeg/28376817#28376817
-        data = FFMPEG.call_ffprobe([
-            '-v', 'error',
-            '-select_streams', 'v:0',
-            '-count_packets',
-            '-show_entries', 'stream=nb_read_packets',
-            '-of', 'csv=p=0',
-            '-of', 'json',
-            self.path
-        ]).communicate()[0]
-        
-        # Convert data from JSON string to dictionary
-        dict = json.loads(data)
-        
-        # Get the total number of frames
-        return int(dict['streams'][0]['nb_read_packets'])
+        details = self.get_ffprobe_file_details()
+        for s in details.get("streams", []):
+            if s.get("codec_type") == "video":
+                if "duration" in s:
+                    return float(s["duration"])
+        return 0.0
     
     def get_video_resolution(self) -> list[int]:
         """
         Get the video resolution using ffprobe
         
-        Args:
-            video: The video file
         Returns:
             List[int]: The video resolution [width, height]
         """
         
-        p = FFMPEG.call_ffmpeg([
-            '-i', self.path,
-        ])
-        stdout, stderr = p.communicate()
-        video_lines = re.findall(': Video: ([^\n]+)', stdout)
-        
-        if not video_lines:
-            return
-        
-        matchs = re.findall("(\d{2,6})x(\d{2,6})", video_lines[0])
-        if matchs:
-            return [int(x) for x in matchs[0]]
+        # Use ffprobe (JSON) to get stream width/height reliably
+        details = self.get_ffprobe_file_details()
+        for s in details.get("streams", []):
+            if s.get("codec_type") == "video":
+                if "width" in s and "height" in s:
+                    return [int(s["width"]), int(s["height"])]
+        return
         
     def extract_frame_from_video(self, time: float = 0.0) -> 'Image':
         """
         Extract a single frame from video data (bytes) at the given time (seconds)
 
         Returns the image as bytes (JPEG). Raises Exception on failure
+        
+        Args:
+            time (float, optional): The time in seconds to extract the frame from. Defaults to 0.0
+        Returns:
+            Image: The extracted frame as an Image object
         """
-        # Build ffmpeg command to write a single jpeg frame to a temporary file,
-        # then read the file bytes and delete the temporary file.
-        ffmpeg_path = FFMPEG.__get_command_path("FFMPEG", FFMPEG_RELATIVE_PATH)
-
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
         tmp_path = tmp.name
         tmp.close()
@@ -107,7 +86,6 @@ class Video(File):
         # Use 'increase' (supported) instead of 'cover'
         vf_filter = 'scale=320:320:force_original_aspect_ratio=increase,crop=320:320'
         cmd = [
-            ffmpeg_path,
             '-hide_banner', '-loglevel', 'error',
             '-ss', str(time),
             '-i', self.path,
@@ -117,17 +95,12 @@ class Video(File):
             '-y',
             tmp_path
         ]
-
-        try:
-            p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            out, err = p.communicate()
-            if p.returncode != 0:
-                stderr_text = err.decode('utf-8', errors='ignore') if isinstance(err, (bytes, bytearray)) else str(err)
-                raise Exception(f'ffmpeg command failed with error: {stderr_text}')
-
-            return File(tmp_path)
-        except FileNotFoundError:
-            raise Exception('ffmpeg command is not available. Thumbnails for videos are not available!')
+        
+        # Call FFMPEG to extract the frame and save it as a JPEG image
+        FFMPEG.call_ffmpeg(cmd).communicate()
+        
+        # Return the extracted frame file
+        return Image(File(tmp_path))
         
     def get_ffprobe_file_details(self) -> dict:
         """
@@ -136,19 +109,21 @@ class Video(File):
         NOTE: The video argument is a Video object from video.py but as I have circular imports i use 
         a string for the type hint
 
-        Args:
-            video: The video file
         Returns:
             dict: The details of the file
         """
         # ffprobe call for get the file info as json
         p = FFMPEG.call_ffprobe([
+            '-v', 'error',
             '-print_format', 'json',
             '-show_format',
             '-show_streams',
             self.path
         ])
-        jsonResult = json.loads(p.communicate()[0].decode('utf-8'))
+        stdout, stderr = p.communicate()
+        
+        # Parse the ffprobe output as JSON
+        jsonResult = json.loads(stdout)
 
         # Format the result
         streams = []

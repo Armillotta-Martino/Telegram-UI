@@ -4,10 +4,11 @@ import os
 from tkinter import filedialog
 from xml.dom.minidom import Entity
 
-from dbJson.file_message import FileMessage, FileMessageType
+from dbJson.telegram_message import TelegramMessage, TelegramMessageType
 from file_manager.file_manager_utils import FileManager_Utils
 from telegram.telegram_manager_client import TelegramManagerClient
-from utils import free_disk_usage
+
+from utils import Utils
 
 class FileManager_Download:
     """
@@ -20,7 +21,7 @@ class FileManager_Download:
     async def download_file(
         client : TelegramManagerClient, 
         chat_instance : Entity, 
-        file : FileMessage,
+        file : TelegramMessage,
         ) -> str:
         """
         Downloads a file from Telegram, ensuring that the total size of the file parts does 
@@ -33,21 +34,19 @@ class FileManager_Download:
         Args:
             client (TelegramManagerClient): The Telegram manager client
             chat_instance (Entity): The chat instance from which to download the file
-            file (FileMessage): The file message to download
-
+            file (TelegramMessage): The file message to download
+        Returns:
+            str: The path to the downloaded file, or None if the user cancels the download
         Raises:
             Exception: If the message is not a file
             Exception: If there is not enough disk space to download the file
-
-        Returns:
-            str: The path to the downloaded file, or None if the user cancels the download
         """
         # Check the type of the message
         json_data = json.loads(file.telegram_message.message)
         type_value = json_data.get("Type")
         
         # Validate type
-        if type_value != FileMessageType.FILE.value:
+        if type_value != TelegramMessageType.FILE.value:
             # Raise an exception if the message is not a file
             raise Exception("The message is not a file")
         
@@ -56,8 +55,8 @@ class FileManager_Download:
         async for message in client.iter_messages(chat_instance, reply_to=file.telegram_message.id):
             # Find the file message
             json_message = json.loads(message.message)
-            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value or \
-               json_message.get("Type") is not None and json_message.get("Type") == FileMessageType.THUMBNAIL.value:
+            if json_message.get("Part") is not None and json_message.get("Part") == TelegramMessageType.LRV.value or \
+               json_message.get("Type") is not None and json_message.get("Type") == TelegramMessageType.THUMBNAIL.value:
                 # Skip LRV and thumbnail files
                 continue
             
@@ -65,8 +64,8 @@ class FileManager_Download:
             totalDownloadSize += message.media.document.size
             
         # Check disk space
-        if totalDownloadSize > free_disk_usage():
-            raise Exception('There is no disk space to download "{}". Space required: {}'.format(file.file_name, totalDownloadSize - free_disk_usage()))
+        if totalDownloadSize > Utils.free_disk_usage():
+            raise Exception('There is no disk space to download "{}". Space required: {}'.format(file.file_name, totalDownloadSize - Utils.free_disk_usage()))
         
         download_files = []
         # Iterate through the messages to find the file message
@@ -75,8 +74,8 @@ class FileManager_Download:
             # Find the file message
             json_message = json.loads(message.message)
             
-            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value or \
-               json_message.get("Type") is not None and json_message.get("Type") == FileMessageType.THUMBNAIL.value:
+            if json_message.get("Part") is not None and json_message.get("Part") == TelegramMessageType.LRV.value or \
+               json_message.get("Type") is not None and json_message.get("Type") == TelegramMessageType.THUMBNAIL.value:
                 # Skip LRV and thumbnail files
                 continue
             
@@ -119,6 +118,9 @@ class FileManager_Download:
         
         # Construct the output file path
         output_path = os.path.join(download_location, file.file_name)
+        
+        # Check if the download directory exists, if not create it
+        os.makedirs(download_location, exist_ok=True)
         
         # Write all parts sequentially into the output file
         with open(output_path, 'wb') as out:

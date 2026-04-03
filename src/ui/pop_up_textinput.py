@@ -1,6 +1,6 @@
 import tkinter as tk
 
-class PopUpTextInput:
+class PopUp_TextInput:
     """
     A simple popup dialog for entering text.
     
@@ -8,13 +8,15 @@ class PopUpTextInput:
     The entered text can be retrieved after the dialog is closed.
     """
     
-    def __init__(self, parent, text = "") -> None:
+    def __init__(self, parent, text : str = "") -> None:
         """
-        Initialize the PopUpTextInput dialog.
+        Initialize the PopUp_TextInput dialog.
         
         Args:
             parent: The parent tkinter element
-            text: The initial text to display in the entry field
+            text (str): The initial text to display in the entry field
+        Returns:
+            None
         """
         self.value = None
         
@@ -43,6 +45,9 @@ class PopUpTextInput:
     def on_submit(self) -> None:
         """
         Handle the submit button click event
+        
+        Returns:
+            None
         """
         # Retrieve the entered text, save it and close the popup
         self.value = self.entry.get()

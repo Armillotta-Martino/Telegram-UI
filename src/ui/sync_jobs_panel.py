@@ -5,9 +5,10 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter.ttk import Frame
 
-from dbJson.file_message import FileMessage
+from dbJson.telegram_message import TelegramMessage
 from file_manager.file_manager_main import FileManager
 from telegram.telegram_manager_client import TelegramManagerClient
+from ui.file_browser_pane import FileBrowserPane
 
 
 class SyncJobsPanel:
@@ -18,7 +19,7 @@ class SyncJobsPanel:
     `start_refresher()` to begin background reloads and `stop()` to stop them.
     """
 
-    def __init__(self, parent : Frame, loop, client : TelegramManagerClient):
+    def __init__(self, parent : Frame, loop : asyncio.AbstractEventLoop, client : TelegramManagerClient) -> None:
         """
         Initialize the SyncJobsPanel
 
@@ -26,6 +27,8 @@ class SyncJobsPanel:
             parent (Frame): The parent frame in which the panel is placed
             loop (asyncio.AbstractEventLoop): The asyncio event loop
             client (TelegramManagerClient): The Telegram client instance
+        Returns:
+            None
         """
         self.parent = parent
         self.loop = loop
@@ -123,7 +126,7 @@ class SyncJobsPanel:
         self.save_sync_jobs()
         link = self.sync_jobs[idx].get('telegram_link')
         pc_path = self.sync_jobs[idx].get('pc_path')
-        telegram_file_message = await FileMessage.get_FileMessage_from_link(self.client, link)
+        telegram_file_message = await TelegramMessage.get_TelegramMessage_from_link(self.client, link)
         await FileManager.sync(self.client, await self.client.get_entity(""), pc_path, telegram_file_message)
         # Note: we don't change UI state for the file browser here
 
@@ -141,7 +144,7 @@ class SyncJobsPanel:
             return
         link = self.sync_jobs[idx].get('telegram_link')
         pc_path = self.sync_jobs[idx].get('pc_path')
-        telegram_file_message = await FileMessage.get_FileMessage_from_link(self.client, link)
+        telegram_file_message = await TelegramMessage.get_TelegramMessage_from_link(self.client, link)
         await FileManager.sync(self.client, await self.client.get_entity(""), pc_path, telegram_file_message)
 
     def delete_job_UI(self):
@@ -187,11 +190,11 @@ class SyncJobsPanel:
         except Exception:
             pass
 
-    def set_file_browser_pane(self, fb):
+    def set_file_browser_pane(self, fb: 'FileBrowserPane'):
         """
         Set the file browser pane reference for this panel, allowing it to update the file browser when sync jobs are resumed/restarted
 
         Args:
-            fb (_type_): _description_
+            fb (FileBrowserPane): The file browser pane instance to set
         """
         self.file_browser_pane = fb

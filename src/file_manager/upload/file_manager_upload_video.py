@@ -4,23 +4,20 @@ import os
 import functools
 from xml.dom.minidom import Entity
 
+from telethon import types 
 from telethon.tl.types import DocumentAttributeImageSize, DocumentAttributeVideo
 
 # Import DbJson
-from dbJson.file_message import FileMessage, FileMessageType
+from dbJson.telegram_message import TelegramMessage, TelegramMessageType
 
 from file_manager.file_manager_utils import FileManager_Utils
 from file_manager.upload.file_manager_upload_utils import FileManager_Upload_Utils
 from telegram.telegram_manager_client import TelegramManagerClient
 
-## Import file types
-# Import LRV class to generate low-resolution videos
+## Import file List[typ# Import LRV class to generate low-resolution videos
 from file_types.LRV import LRV
 from file_types.image import Image
 from file_types.video import Video
-
-# Import FFMPEG class to handle video compression
-from compression.FFMPEG import FFMPEG
 
 class FileManager_Upload_Video:
     """
@@ -33,8 +30,8 @@ class FileManager_Upload_Video:
         client : TelegramManagerClient, 
         chat_instance : Entity, 
         file : Video, 
-        message : FileMessage
-        ) -> None:
+        message : TelegramMessage
+        ) -> list[types.Message] | types.Message:
         """
         Upload a video file to Telegram, including generating and uploading a thumbnail and a low-resolution version of the video
 
@@ -42,7 +39,11 @@ class FileManager_Upload_Video:
             client (TelegramManagerClient): The Telegram manager client to use for uploading the video
             chat_instance (Entity): The chat entity to send the video to
             file (Video): The video file to upload
-            message (FileMessage): The message to comment the video to
+            message (TelegramMessage): The message to comment the video to
+        Returns:
+            list[types.Message] | types.Message: The message(s) containing the uploaded video(s)
+        Raises:
+            Exception: If the video upload fails
         """
         
         '''
@@ -70,11 +71,24 @@ class FileManager_Upload_Video:
         # Generate the LRV video
         LRV_video = LRV.generate_video_low_resolution(file)
         
+        if LRV_video is None:
+            # If the LRV video generation failed, log the error and continue with the original video
+            print(f"Failed to generate LRV video for {file.file_name}. Continuing with original video.")
+            raise Exception(f"Failed to generate LRV video for {file.file_name}.")
+        
         # File caption for LRV
-        file_caption_lrv = FileMessage.generate_json_caption(FileMessageType.LRV, file.file_name)
+        file_caption_lrv = TelegramMessage.generate_json_caption(TelegramMessageType.LRV, file.file_name)
         
         # Post the LRV video
-        await FileManager_Upload_Video.__process_normal_video(client, chat_instance, LRV_video, caption = file_caption_lrv, comment_to = message, force_document = False, supports_streaming = True)
+        await FileManager_Upload_Video.__process_normal_video(
+            client, 
+            chat_instance, 
+            LRV_video, 
+            caption = file_caption_lrv, 
+            comment_to = message, 
+            force_document = False, 
+            supports_streaming = True
+        )
         
         LRV_video.close()
         
@@ -86,15 +100,15 @@ class FileManager_Upload_Video:
         ### Original video
         
         # File caption for the original video
-        file_caption = FileMessage.generate_json_caption(FileMessageType.FILE, file.file_name)
+        file_caption = TelegramMessage.generate_json_caption(TelegramMessageType.FILE, file.file_name)
         
         # Check if the file size is bigger then the max allowed size for the user
         if file.size > client.max_file_size:
             # Process as large video
-            await FileManager_Upload_Video.__process_large_video(client, chat_instance, file, caption = file_caption, comment_to = message)
+            return await FileManager_Upload_Video.__process_large_video(client, chat_instance, file, caption = file_caption, comment_to = message)
         else:
             # Process as normal video
-            await FileManager_Upload_Video.__process_normal_video(client, chat_instance, file, caption = file_caption, comment_to = message, force_document = True)
+            return await FileManager_Upload_Video.__process_normal_video(client, chat_instance, file, caption = file_caption, comment_to = message, force_document = True)
     
     @staticmethod    
     async def __process_normal_video(
@@ -102,21 +116,23 @@ class FileManager_Upload_Video:
         chat_entity : Entity, 
         file: Video, 
         caption : str, 
-        comment_to : FileMessage, 
+        comment_to : TelegramMessage, 
         force_document = False, 
         supports_streaming : bool = False
-        ) -> None:
+        ) -> types.Message:
         """
         File is normal file (less than max allowed size), upload it as a single file
         
         Args:
-            client: Telegram manager client
-            chat_entity: Chat entity to send the file to
-            file: Video file to upload
-            caption: Caption for the file
-            comment_to: FileMessage to comment the file to
-            force_document: Whether to force the file to be sent as a document
-            supports_streaming: Whether the video supports streaming
+            client (TelegramManagerClient): Telegram manager client
+            chat_entity (Entity): Chat entity to send the file to
+            file (Video): Video file to upload
+            caption (str): Caption for the file
+            comment_to (TelegramMessage): TelegramMessage to comment the file to
+            force_document (bool): Whether to force the file to be sent as a document
+            supports_streaming (bool): Whether the video supports streaming
+        Returns:
+            types.Message: The message containing the uploaded video
         """
         
         # Get video details
@@ -135,7 +151,7 @@ class FileManager_Upload_Video:
         )
         
         # Send the file message
-        await client.send_file(
+        return await client.send_file(
             chat_entity, 
             file, 
             comment_to = comment_to.telegram_message, 
@@ -160,22 +176,26 @@ class FileManager_Upload_Video:
         chat_entity : Entity, 
         file : Video, 
         caption : str, 
-        comment_to : FileMessage
-        ) -> None:
+        comment_to : TelegramMessage
+        ) -> list[types.Message]:
         """
         Process large video file by splitting it into parts and uploading each part separately
         
         Args:
-            client: Telegram manager client
-            chat_entity: Chat entity to send the file to
-            file: Video file to upload
-            caption: Caption for the file
-            comment_to: FileMessage to comment the file to
+            client (TelegramManagerClient): Telegram manager client
+            chat_entity (Entity): Chat entity to send the file to
+            file (Video): Video file to upload
+            caption (str): Caption for the file
+            comment_to (TelegramMessage): TelegramMessage to comment the file to
+        Returns:
+            list[types.Message]: The list of messages containing the uploaded video parts
         """
         # Calculate how many parts are needed
         parts = math.ceil(file.size / client.max_file_size)
         # Calculate the zfill for part numbering (e.g., 001, 002, etc.)
         zfill = int(math.log10(10)) + 1
+        
+        messages = list()
 
         # Loop every part
         for part in range(parts):
@@ -198,30 +218,36 @@ class FileManager_Upload_Video:
             # Convert caption to JSON string
             json_file_message = json.dumps(caption, indent=4)
             # Send the file
-            await client.send_file(chat_entity, splitted_file, comment_to = comment_to.telegram_message, caption = json_file_message, force_document = True)
+            message =await client.send_file(chat_entity, splitted_file, comment_to = comment_to.telegram_message, caption = json_file_message, force_document = True)
+            # Append the message to the list of messages
+            messages.append(message)
             # Get the next part
-            file.seek(client.max_file_size * part, split_seek=True)
-            
+            file.seek(client.max_file_size * part)
+        
+        # Return the list of messages for all parts
+        return messages
             
     @staticmethod    
     async def __process_thumbnail(
         client : TelegramManagerClient, 
         chat_entity : Entity, 
         file: Video, 
-        comment_to : FileMessage,
+        comment_to : TelegramMessage,
         ) -> None:
         """
         File is normal file (less than max allowed size), upload it as a single file
         
         Args:
-            client: Telegram manager client
-            chat_entity: Chat entity to send the file to
-            video: Video file to use to generate the thumbnail
-            comment_to: FileMessage to comment the file to
+            client (TelegramManagerClient): Telegram manager client
+            chat_entity (Entity): Chat entity to send the file to
+            file (Video): Video file to use to generate the thumbnail
+            comment_to (TelegramMessage): TelegramMessage to comment the file to
+        Returns:
+            None
         """
         
         # Extract a frame from the video to use as thumbnail for the LRV video
-        thumb_file = Image(FFMPEG.extract_frame_from_video(file))
+        thumb_file = Image(file.extract_frame_from_video())
         
         # Upload the file data
         # This is done before send the message with the file to have the file already uploaded when sending the message
@@ -234,7 +260,7 @@ class FileManager_Upload_Video:
         )
         
         # Generate the thumbnail caption
-        file_caption_thumbnail = FileMessage.generate_json_caption(FileMessageType.THUMBNAIL, file.file_name)
+        file_caption_thumbnail = TelegramMessage.generate_json_caption(TelegramMessageType.THUMBNAIL, file.file_name)
         json_file_message = json.dumps(file_caption_thumbnail, indent=4)
         
         img_dimensions = thumb_file.get_dimensions()

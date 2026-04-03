@@ -3,13 +3,17 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 from xml.dom.minidom import Entity
 
+# Import configuration variables
+from config import API_ID, API_HASH, CHANNEL_NAME
+
 from file_manager.file_manager_main import FileManager
 from compression.FFMPEG import FFMPEG
 from file_types.file import File
-from config import API_ID, API_HASH, CHANNEL_NAME
-from ui.pop_up_textinput import PopUpTextInput
+
+from ui.pop_up_textinput import PopUp_TextInput
 from ui.file_browser_pane import FileBrowserPane
 from ui.sync_jobs_panel import SyncJobsPanel
+
 from telegram.telegram_manager_client import TelegramManagerClient
 
 # === Global state ===
@@ -109,7 +113,7 @@ async def _create_folder_UI() -> None:
     
     try:
         # Open the pop up to let the user insert the name
-        pop_up_name = PopUpTextInput(root)
+        pop_up_name = PopUp_TextInput(root)
         
         # Create the folder
         message_instance = await FileManager.create_folder(
@@ -226,7 +230,7 @@ async def _rename_UI() -> None:
             return
         
         # Open the pop up to let the user insert the new name
-        pop_up_name = PopUpTextInput(root, file_browser_pane.selected.short_name)
+        pop_up_name = PopUp_TextInput(root, file_browser_pane.selected.short_name)
         
         # Rename the file
         await FileManager.rename(client, await _get_chat_instance(), file_browser_pane.selected, pop_up_name.value + "." +file_browser_pane.selected.extension)

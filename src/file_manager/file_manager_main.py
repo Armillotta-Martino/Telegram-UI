@@ -14,7 +14,7 @@ from telethon import TelegramClient
 from telethon.tl.types import InputMessagesFilterPinned
 
 # Import DbJson
-from dbJson.file_message import FileMessage, FileMessageType
+from dbJson.telegram_message import TelegramMessage, TelegramMessageType
 
 from file_manager.download.file_manager_download import FileManager_Download
 from file_manager.file_manager_utils import FileManager_Utils
@@ -34,41 +34,45 @@ class FileManager():
     
     @classmethod
     async def get_root(
-        self, 
+        cls, 
         client : TelegramManagerClient, 
         chat_instance : Entity
-        ) -> FileMessage:
+        ) -> TelegramMessage:
         """
         Get the root folder of the chat
         The root folder is the first pinned message in the chat
         
         Args:
-            client: The telegram client to use
-            chat_instance: The chat to get the root folder from
+            client (TelegramManagerClient): The telegram client to use
+            chat_instance (Entity): The chat to get the root folder from
         Returns:
-            FileMessage: The root folder message wrapped in a FileMessage object or None if not found
+            TelegramMessage: The root folder message wrapped in a TelegramMessage object or None if not found
         """
+        
+        if not TelegramMessage._TelegramMessage__valid_chat_entity(chat_instance):
+            raise ValueError("Invalid chat entity")
         
         async for msg in client.iter_messages(chat_instance, filter=InputMessagesFilterPinned()):
             # Get the first pinned message
-            return FileMessage(msg)
+            return TelegramMessage(msg)
         
-        return None
+        # Root not initialized. Create the root message and pin it
+        return await cls.create_root(client, chat_instance)
     
     @classmethod
     async def create_root(
-        self, 
+        cls, 
         client : TelegramManagerClient, 
         chat_instance : Entity
-        ) -> FileMessage:
+        ) -> TelegramMessage:
         """
         Create the root folder in the chat
         
         Args:
-            client: The telegram client to use
-            chat_instance: The chat to create the root folder in
+            client (TelegramManagerClient): The telegram client to use
+            chat_instance (Entity): The chat to create the root folder in
         Returns:
-            FileMessage: The root folder message wrapped in a FileMessage object
+            TelegramMessage: The root folder message wrapped in a TelegramMessage object
         Raises:
             Exception: If the root folder creation fails
         """
@@ -77,7 +81,7 @@ class FileManager():
             root_message = await FileManager_Utils.send_telegram_message(
                 client, 
                 chat_instance, 
-                FileMessage.generate_json_caption(FileMessageType.ROOT, "ROOT"),
+                TelegramMessage.generate_json_caption(TelegramMessageType.ROOT, "ROOT"),
             )
             # Pin the root folder message
             await client.pin_message(chat_instance, root_message.telegram_message)
@@ -88,30 +92,30 @@ class FileManager():
     
     @classmethod
     async def create_folder(
-        self, 
+        cls, 
         client : TelegramManagerClient, 
         chat_instance : Entity, 
         folder_name : str, 
-        parent_message : FileMessage
-        ) -> FileMessage:
+        parent_message : TelegramMessage
+        ) -> TelegramMessage:
         """
         Create a new folder
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat to create the folder in
-            folder_name: The name of the new folder
-            parent_message: The parent folder message
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat to create the folder in
+            folder_name (str): The name of the new folder
+            parent_message (TelegramMessage): The parent folder message
         Returns:
-            FileMessage: The created folder message wrapped in a FileMessage object
+            TelegramMessage: The created folder message wrapped in a TelegramMessage object
         """
         # Request parent message update
         await parent_message.refresh(client, chat_instance)
         
         # Create the folder message
-        data = FileMessage.generate_json_caption(FileMessageType.FOLDER, folder_name)
+        data = TelegramMessage.generate_json_caption(TelegramMessageType.FOLDER, folder_name)
         # Set the parent
-        data["Parent"] = FileMessage.calculate_message_link(chat_instance, parent_message)
+        data["Parent"] = TelegramMessage.calculate_message_link(chat_instance, parent_message)
         
         # Send the folder message
         folder_message = await FileManager_Utils.send_telegram_message(
@@ -121,29 +125,29 @@ class FileManager():
         )
         
         # Update parent message children
-        await parent_message.add_children(client, chat_instance, FileMessage.calculate_message_link(chat_instance, folder_message))
+        await parent_message.add_children(client, chat_instance, TelegramMessage.calculate_message_link(chat_instance, folder_message))
         
         # Return the created folder message
         return folder_message
     
     @classmethod
     async def upload_file(
-        self, 
+        cls, 
         client : TelegramManagerClient, 
         chat_instance : Entity, 
         file : File, 
-        parent_message : FileMessage
-        ) -> FileMessage:
+        parent_message : TelegramMessage
+        ) -> TelegramMessage:
         """
         Upload a new file
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat to upload the file in
-            file: The file to upload
-            parent_message: The parent folder message
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat to upload the file in
+            file (File): The file to upload
+            parent_message (TelegramMessage): The parent folder message
         Returns:
-            FileMessage: The created folder message wrapped in a FileMessage object
+            TelegramMessage: The created folder message wrapped in a TelegramMessage object
         """
         return await FileManager_Upload.upload_file(
             client,
@@ -151,21 +155,21 @@ class FileManager():
             file,
             parent_message
         )
-        
+    
     @classmethod
     async def download_file(
-        self, 
+        cls, 
         client : TelegramManagerClient, 
         chat_instance : Entity, 
-        file : FileMessage,
+        file : TelegramMessage,
         ) -> str:
         """
         Download a new file
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat to download the file in
-            file: The FileMessage to download
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat to download the file in
+            file (TelegramMessage): The TelegramMessage to download
         Returns:
             str: The download location of the file
         """
@@ -177,21 +181,40 @@ class FileManager():
     
     @classmethod
     async def move(
-        self, 
-        client : TelegramClient, 
+        cls, 
+        client : TelegramManagerClient, 
         chat_instance : Entity, 
-        message : FileMessage, 
-        new_parent_message : FileMessage
+        message : TelegramMessage, 
+        new_parent_message : TelegramMessage
         ) -> None:
         """
         Move a file or a folder
 
         Args:
-            client (TelegramClient): The Telegram client to use
+            client (TelegramManagerClient): The Telegram client to use
             chat_instance (Entity): The chat instance to use
-            message (Message): The message to move
-            new_parent_message (Message): The new parent message to move the message into
+            message (TelegramMessage): The message to move
+            new_parent_message (TelegramMessage): The new parent message to move the message into
+        Returns:
+            None
         """
+        
+        # Validate the chat instance
+        if not TelegramMessage._TelegramMessage__valid_chat_entity(chat_instance):
+            raise ValueError("Invalid chat entity")
+        
+        # Validate the message
+        if not TelegramMessage._TelegramMessage__valid_message(message):
+            raise ValueError("Invalid message entity")
+        
+        # Validate the new parent message
+        if not TelegramMessage._TelegramMessage__valid_message(new_parent_message):
+            raise ValueError("Invalid new parent message entity")
+        
+        # Validate that the message is not being moved into itself
+        if message.telegram_message.id == new_parent_message.telegram_message.id:
+            raise Exception("Cannot move a message into itself")
+        
         # Update
         await message.refresh(client, chat_instance)
         await new_parent_message.refresh(client, chat_instance)
@@ -201,14 +224,14 @@ class FileManager():
         # --------------------------------------------
         
         json_message_data = json.loads(message.telegram_message.message)
-        parent_message = await FileMessage.get_FileMessage_from_link(client, json_message_data['Parent'])    
-        await parent_message.remove_children(client, chat_instance, FileMessage.calculate_message_link(chat_instance, message))
+        parent_message = await TelegramMessage.get_TelegramMessage_from_link(client, json_message_data['Parent'])    
+        await parent_message.remove_children(client, chat_instance, TelegramMessage.calculate_message_link(chat_instance, message))
         
         # --------------------------------------------
         # Update the parent in the message
         # --------------------------------------------
         
-        json_message_data['Parent'] = FileMessage.calculate_message_link(chat_instance, new_parent_message)
+        json_message_data['Parent'] = TelegramMessage.calculate_message_link(chat_instance, new_parent_message)
         json_new_message = json.dumps(json_message_data, indent=4)
         await client.edit_message(chat_instance, message.telegram_message, json_new_message)
         
@@ -216,24 +239,30 @@ class FileManager():
         # Add the children to the new parent
         # --------------------------------------------
         
-        await new_parent_message.add_children(client, chat_instance, FileMessage.calculate_message_link(chat_instance, message))
+        await new_parent_message.add_children(client, chat_instance, TelegramMessage.calculate_message_link(chat_instance, message))
+        
+        # Refresh the message and the new parent message to ensure the changes are reflected
+        await message.refresh(client, chat_instance)
+        await new_parent_message.refresh(client, chat_instance)
     
     @classmethod
     async def rename(
-        self, 
-        client : TelegramClient, 
+        cls, 
+        client : TelegramManagerClient, 
         chat_instance : Entity, 
-        message : FileMessage, 
+        message : TelegramMessage, 
         new_name : str
         ) -> None:
         """
         Rename a file or a folder
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat instance
-            message: The file or folder message to rename
-            new_name: The new name for the file or folder
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat instance
+            message (TelegramMessage): The file or folder message to rename
+            new_name (str): The new name for the file or folder
+        Returns:
+            None
         """
         # Update
         await message.refresh(client, chat_instance)
@@ -248,20 +277,25 @@ class FileManager():
         # Edit the message
         await client.edit_message(chat_instance, message.telegram_message, json_new_message)
         
+        # Refresh the message to ensure the changes are reflected
+        await message.refresh(client, chat_instance)
+    
     @classmethod
     async def open_preview(
-        self, 
+        cls, 
         client : TelegramClient, 
         chat_instance : Entity, 
-        message : FileMessage
+        message : TelegramMessage
         ) -> None:
         """
         Open a preview of a file or a folder
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat instance
-            message: The file or folder message to preview
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat instance
+            message (TelegramMessage): The file or folder message to preview
+        Returns:
+            None
         """
         # Update
         await message.refresh(client, chat_instance)
@@ -274,7 +308,7 @@ class FileManager():
             # Find the file message
             json_message = json.loads(message.message)
             
-            if json_message.get("Part") is not None and json_message.get("Part") == FileMessageType.LRV.value:
+            if json_message.get("Type") is not None and json_message.get("Type") == TelegramMessageType.LRV.value:
                 # create temp file path
                 tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
                 tmp_path = tmp.name
@@ -381,21 +415,23 @@ class FileManager():
                     cleanup_thread.start()
                 except Exception as e:
                     print('Failed to open player:', e)
-                
+    
     @classmethod
     async def delete(
-        self, 
+        cls, 
         client : TelegramClient, 
         chat_instance : Entity, 
-        message : FileMessage
+        message : TelegramMessage
         ) -> None:
         """
         Delete a file or a folder
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat instance
-            message: The file or folder message to delete
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat instance
+            message (TelegramMessage): The file or folder message to delete
+        Returns:
+            None
         """
         # Update
         await message.refresh(client, chat_instance)
@@ -403,73 +439,146 @@ class FileManager():
         # Parse the message data
         json_message_data = json.loads(message.telegram_message.message)
         # Calculate the message link
-        deleted_message_link = FileMessage.calculate_message_link(chat_instance, message)
+        deleted_message_link = TelegramMessage.calculate_message_link(chat_instance, message)
         
         # Check if file or folder
         match json_message_data['Type']:
-            case FileMessageType.FOLDER.value:
+            case TelegramMessageType.FOLDER.value:
                 # Remove all the children
                 for c in json_message_data["Children"]:
                     # Recursively delete children
-                    await self.delete(client, chat_instance, await FileMessage.get_FileMessage_from_link(client, c))
+                    await cls.delete(client, chat_instance, await TelegramMessage.get_TelegramMessage_from_link(client, c))
                 
                 # Delete the folder message
                 await client.delete_messages(chat_instance, message.telegram_message.id)
-            case FileMessageType.FILE.value:
+            case TelegramMessageType.FILE.value:
                 # Delete the file message
                 await client.delete_messages(chat_instance, message.telegram_message.id)
-            case FileMessageType.ROOT.value:
+            case TelegramMessageType.ROOT.value:
                 raise Exception("Cannot delete root folder")
-            case FileMessageType.LRV.value:
+            case TelegramMessageType.LRV.value:
                 raise Exception("Cannot delete LRV file directly")
             case _:
                 raise Exception("Not implemented")
         
         # Remove the message from the parent's children
-        parent_message = await FileMessage.get_FileMessage_from_link(client, json_message_data['Parent'])
+        parent_message = await TelegramMessage.get_TelegramMessage_from_link(client, json_message_data['Parent'])
         await parent_message.remove_children(client, chat_instance, deleted_message_link)
+        
+        # Refresh the message to ensure it's deleted
+        await message.refresh(client, chat_instance)
     
+    class SyncState(Enum):
+        NEW = "new"
+        IN_PROGRESS = "in_progress"
+        PAUSED = "paused"
+        STOPPED = "stopped"
+        FINISHED = "finished"
+
+    @staticmethod
+    async def _save_sync_job(pc_path: str, telegram_link: str) -> None:
+        sync_jobs = []
+        if not os.path.exists("sync_jobs.json"):
+            with open("sync_jobs.json", "w") as f:
+                json.dump(sync_jobs, f, indent=4)
+
+        with open("sync_jobs.json", "r") as f:
+            try:
+                sync_jobs = json.load(f)
+            except json.JSONDecodeError:
+                sync_jobs = []
+
+            for job in sync_jobs:
+                if job["pc_path"] == pc_path and job["telegram_link"] == telegram_link:
+                    return
+
+        sync_job = {
+            "pc_path": pc_path,
+            "telegram_link": telegram_link,
+            "state": FileManager.SyncState.NEW.value,
+            "synced_files": []
+        }
+        sync_jobs.append(sync_job)
+
+        with open("sync_jobs.json", "w") as f:
+            json.dump(sync_jobs, f, indent=4)
+
+    @staticmethod
+    async def _update_sync_job(sync_job: Dict, synced_file: str) -> None:
+        with open("sync_jobs.json", "r") as f:
+            sync_jobs = json.load(f)
+
+            for job in sync_jobs:
+                if job["pc_path"] == sync_job["pc_path"] and job["telegram_link"] == sync_job["telegram_link"]:
+                    if synced_file not in job["synced_files"]:
+                        job["synced_files"].append(synced_file)
+                        sync_job["synced_files"].append(synced_file)
+                    break
+
+        with open("sync_jobs.json", "w") as f:
+            json.dump(sync_jobs, f, indent=4)
+
+    @staticmethod
+    async def _get_sync_job(pc_path: str, telegram_link: str) -> Optional[Dict]:
+        with open("sync_jobs.json", "r") as f:
+            sync_jobs = json.load(f)
+            for job in sync_jobs:
+                if job["pc_path"] == pc_path and job["telegram_link"] == telegram_link:
+                    return job
+        return None
+
+    @staticmethod
+    async def _is_executed_sync_job(sync_job: Dict, pc_file_path: str) -> bool:
+        return pc_file_path in sync_job["synced_files"]
+
+    @staticmethod
+    async def _update_sync_job_state(sync_job: Dict, new_state: 'FileManager.SyncState') -> None:
+        with open("sync_jobs.json", "r") as f:
+            sync_jobs = json.load(f)
+
+            for job in sync_jobs:
+                if job["pc_path"] == sync_job["pc_path"] and job["telegram_link"] == sync_job["telegram_link"]:
+                    job["state"] = new_state.value
+                    break
+
+        with open("sync_jobs.json", "w") as f:
+            json.dump(sync_jobs, f, indent=4)
+
     @classmethod
     async def sync(
-        self, 
+        cls, 
         client : TelegramClient, 
         chat_instance : Entity, 
         folder : str,
-        current_position : FileMessage
+        current_position : TelegramMessage
         ) -> None:
         """
-        Delete a file or a folder
+        Sync a folder with Telegram
         
         Args:
-            client: The Telegram client
-            chat_instance: The chat instance
-            message: The file or folder message to delete
+            client (TelegramManagerClient): The Telegram client
+            chat_instance (Entity): The chat instance
+            folder (str): The folder path to sync
+            current_position (TelegramMessage): The current position in the Telegram folder structure
+        Returns:
+            None
         """
         
-        class SyncState(Enum):
-            NEW = "new"
-            IN_PROGRESS = "in_progress"
-            PAUSED = "paused"
-            STOPPED = "stopped"
-            FINISHED = "finished"
-            
-        async def scan_dir(path: str, current_position: FileMessage, sync_job: dict):
+        async def scan_dir(path: str, current_position: TelegramMessage, sync_job: dict) -> None:
             """
-                Recursively explore the folder and sync it with Telegram
+            Recursively explore the folder and sync it with Telegram
             
-            :param path: Description
-            :type path: str
-            :param current_position: Description
-            :type current_position: FileMessage
-            :param sync_job: Description
-            :type sync_job: dict
+            Args:
+                path (str): The path of the folder to sync
+                current_position (TelegramMessage): The current position in the Telegram folder structure
+                sync_job (dict): The sync job to update with the synced files
             """    
             # Recursive explore the folder
             with os.scandir(path) as it:
                 for entry in it:
                     
                     # Check if the current file or folder has already been synced in the sync job
-                    if await is_executed_sync_job(sync_job, entry.path):
+                    if await cls._is_executed_sync_job(sync_job, entry.path):
                         # File or folder already synced, skip
                         print(f"File or folder already synced, skipping: {entry.path}")
                         continue
@@ -486,7 +595,7 @@ class FileManager():
                         # If a child with the same name as the folder to sync already exists, move into it; otherwise, create the folder and move into it
                         if (children_by_file_name is not None) and (len(children_by_file_name) > 0):
                             # Update the sync job with the executed folder
-                            await update_sync_job(sync_job, entry.path)
+                            await cls._update_sync_job(sync_job, entry.path)
                             
                             # Recurse into directory (avoid following symlinks)
                             await scan_dir(entry.path, children_by_file_name[0], sync_job)
@@ -500,7 +609,7 @@ class FileManager():
                             )
                             
                             # Update the sync job with the executed folder
-                            await update_sync_job(sync_job, entry.path)
+                            await cls._update_sync_job(sync_job, entry.path)
                             
                             # Recurse into directory (avoid following symlinks)
                             await scan_dir(entry.path, new_folder, sync_job)
@@ -527,7 +636,7 @@ class FileManager():
                         # If a child with the same name as the file to sync already exists, move into it; otherwise, upload the file
                         if (children_by_file_name is not None) and (len(children_by_file_name) > 0):
                             # Update the sync job with the executed folder
-                            await update_sync_job(sync_job, entry.path)
+                            await cls._update_sync_job(sync_job, entry.path)
                             
                             # File already exists, skip
                             print(f"File already exists, skipping: {entry.path}")
@@ -541,156 +650,36 @@ class FileManager():
                             )
                             
                             # Update the sync job with the executed folder
-                            await update_sync_job(sync_job, entry.path)
+                            await cls._update_sync_job(sync_job, entry.path)
         
-        async def save_sync_job(pc_path: str, telegram_link: str):
-            """
-            Save the pc path and Telegram path of the current folder in a json file to save the sync jobs
-
-            Args:
-                pc_path (str): The path of the folder on the PC
-                telegram_path (str): The path of the folder on Telegram
-            """
-            
-            # Init the sync jobs list
-            sync_jobs = []
-            
-            # If the json file does not exist, create it with an empty list of sync jobs
-            if not os.path.exists("sync_jobs.json"):
-                with open("sync_jobs.json", "w") as f:
-                    json.dump(sync_jobs, f, indent=4)
-            
-            # Check if the sync jobs already exists
-            with open("sync_jobs.json", "r") as f:
-                try:
-                    sync_jobs = json.load(f)
-                except json.JSONDecodeError:
-                    sync_jobs = []
-                    
-                for job in sync_jobs:
-                    if job["pc_path"] == pc_path and job["telegram_link"] == telegram_link:
-                        # Sync job already exists, do not save it again
-                        return
-            
-            # Create the new sync job
-            sync_job = {
-                "pc_path": pc_path,
-                "telegram_link": telegram_link,
-                "state": SyncState.NEW.value,
-                "synced_files": []
-            }
-            # Append the new sync job to the list of sync jobs
-            sync_jobs.append(sync_job)
-            
-            # Save the sync jobs in the json file
-            with open("sync_jobs.json", "w") as f:
-                json.dump(sync_jobs, f, indent=4)
-        
-        async def update_sync_job(sync_job: Dict, synced_file: str):
-            """
-            Update the sync job with the new synced file
-
-            Args:
-                sync_job (Dict): The sync job to update
-                telegram_link (str): The link of the folder on Telegram
-                synced_file (str): The name of the file that has been synced
-            """
-            # Load the sync jobs from the json file
-            with open("sync_jobs.json", "r") as f:
-                sync_jobs = json.load(f)
-                
-                # Find the sync job to update
-                for job in sync_jobs:
-                    if job["pc_path"] == sync_job["pc_path"] and job["telegram_link"] == sync_job["telegram_link"]:
-                        # Sync job found, update it
-                        if synced_file not in job["synced_files"]:
-                            # Update the sync job with the new synced file
-                            job["synced_files"].append(synced_file)
-                            sync_job["synced_files"].append(synced_file)
-                        break
-            
-            # Save the updated sync jobs in the json file
-            with open("sync_jobs.json", "w") as f:
-                json.dump(sync_jobs, f, indent=4)
-        
-        async def get_sync_job(pc_path: str, telegram_link: str) -> Optional[Dict]:
-            """
-            Get the sync job for the given pc path and telegram path
-
-            Args:
-                pc_path (str): The path of the folder on the PC
-                telegram_link (str): The link of the folder on Telegram
-            Returns:
-                Optional[Dict]: The sync job if found, None otherwise
-            """
-            # Load the sync jobs from the json file
-            with open("sync_jobs.json", "r") as f:
-                sync_jobs = json.load(f)
-                
-                # Find the sync job
-                for job in sync_jobs:
-                    if job["pc_path"] == pc_path and job["telegram_link"] == telegram_link:
-                        return job
-            
-            return None
-        
-        async def is_executed_sync_job(sync_job: Dict, pc_file_path: str) -> bool:
-            """
-            Check if the given file has already been synced in the sync job
-
-            Args:
-                sync_job (Dict): The sync job to check
-                pc_file_path (str): The path of the file on the PC to check
-            Returns:
-                bool: True if the file has already been synced, False otherwise
-            """
-            return pc_file_path in sync_job["synced_files"]
-        
-        async def update_sync_job_state(sync_job: Dict, new_state: SyncState):
-            """
-            Update the state of the sync job
-
-            Args:
-                sync_job (Dict): The sync job to update
-                new_state (SyncState): The new state of the sync job
-            """
-            # Load the sync jobs from the json file
-            with open("sync_jobs.json", "r") as f:
-                sync_jobs = json.load(f)
-                
-                # Find the sync job to update
-                for job in sync_jobs:
-                    if job["pc_path"] == sync_job["pc_path"] and job["telegram_link"] == sync_job["telegram_link"]:
-                        # Sync job found, update its state
-                        job["state"] = new_state.value
-                        break
-            
-            # Save the updated sync jobs in the json file
-            with open("sync_jobs.json", "w") as f:
-                json.dump(sync_jobs, f, indent=4)
+        # The sync helper functions are implemented as class-level async methods
+        # so they can be monkeypatched in tests.
         
         # Update
         await current_position.refresh(client, chat_instance)
         
+        # Save the current position to update it at the end of the sync
+        saved_current_position = current_position
+
         # Save the sync job
-        await save_sync_job(folder, FileMessage.calculate_message_link(chat_instance, current_position))
-        
+        await cls._save_sync_job(folder, TelegramMessage.calculate_message_link(chat_instance, current_position))
+
         # Get the sync job
-        sync_job = await get_sync_job(folder, FileMessage.calculate_message_link(chat_instance, current_position))
-        
+        sync_job = await cls._get_sync_job(folder, TelegramMessage.calculate_message_link(chat_instance, current_position))
+
         # Update the sync job state to in_progress
-        await update_sync_job_state(sync_job, SyncState.IN_PROGRESS)
-        
+        await cls._update_sync_job_state(sync_job, cls.SyncState.IN_PROGRESS)
+
         # Check if the current folder has already been synced (this is useful to avoid syncing the 
         # same folder multiple times in case of nested folders with the same name)
-        if not await is_executed_sync_job(sync_job, folder):
+        if not await cls._is_executed_sync_job(sync_job, folder):
             # Get the children of the current position with the same name as the folder to sync
             children_by_file_name = await current_position.get_children_by_file_name(client, os.path.basename(folder))
             
             # If a child with the same name as the folder to sync already exists, move into it; otherwise, create the folder and move into it
             if (children_by_file_name is not None) and (len(children_by_file_name) > 0):
                 # Folder already exists, move into it
-                current_position = await FileMessage.get_FileMessage_from_link(client, FileMessage.calculate_message_link(chat_instance, children_by_file_name[0]))
+                current_position = await TelegramMessage.get_TelegramMessage_from_link(client, TelegramMessage.calculate_message_link(chat_instance, children_by_file_name[0]))
             else:
                 # Create the root folder
                 parent_folder = await FileManager.create_folder(
@@ -701,13 +690,16 @@ class FileManager():
                 )
                 
                 # Move the current position to the new folder
-                current_position = await FileMessage.get_FileMessage_from_link(client, FileMessage.calculate_message_link(chat_instance, parent_folder))
+                current_position = await TelegramMessage.get_TelegramMessage_from_link(client, TelegramMessage.calculate_message_link(chat_instance, parent_folder))
         
         # Update the sync job with the new Telegram path of the current position
-        await update_sync_job(sync_job, folder)
+        await cls._update_sync_job(sync_job, folder)
         
         # Scan the folder
         await scan_dir(folder, current_position, sync_job)
         
         # Update the sync job state to finished
-        await update_sync_job_state(sync_job, SyncState.FINISHED)
+        await cls._update_sync_job_state(sync_job, cls.SyncState.FINISHED)
+        
+        # Refresh the saved current position to ensure all changes are reflected
+        await saved_current_position.refresh(client, chat_instance)

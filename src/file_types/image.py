@@ -19,8 +19,10 @@ class Image(File):
         Constructor
         
         Args:
-            file: The file to convert to Image
-            force_file: Force to treat the file as an image even if the mime type is not image
+            file (File): The file to convert to Image
+            force_file (bool): Force to treat the file as an image even if the mime type is not image
+        Returns:
+            None
         """
         # Convert File to Image
         super().__init__(file.path)
@@ -44,17 +46,18 @@ class Image(File):
         
         ################################################################################
         # Execute ffprobe (to show streams), and get the output in JSON format
-        data = FFMPEG.call_ffprobe([
+        p = FFMPEG.call_ffprobe([
             '-v', 'error',
             '-select_streams', 'v:0',
             '-show_entries', 'stream=width,height',
             '-of', 'csv=p=0',
             '-of', 'json',
             self.path
-        ]).communicate()[0]
+        ])
+        stdout, stderr = p.communicate()
         
         # Convert data from JSON string to dictionary
-        dict = json.loads(data)
+        dict = json.loads(stdout)
         
         # Get the dimensions
         return int(dict['streams'][0]['width']), int(dict['streams'][0]['height'])

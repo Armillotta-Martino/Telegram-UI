@@ -3,8 +3,10 @@ import json
 from xml.dom.minidom import Entity
 import click
 
+# Import config variables
 from config import RECONNECT_TIMEOUT
-from dbJson.file_message import FileMessage
+
+from dbJson.telegram_message import TelegramMessage
 from telegram.telegram_manager_client import TelegramManagerClient
 
 from ui.pop_up_progress_bar import PopUp_Progress_Bar
@@ -27,9 +29,11 @@ class FileManager_Utils:
         It uses a lock to prevent multiple reconnection at the same time
             
         Args:
-            client: The Telegram client to reconnect
-            reconnecting_lock: A lock to prevent multiple reconnection at the same time
-            upload_semaphore: A semaphore to limit the number of parallel uploads
+            client (TelegramManagerClient): The Telegram client to reconnect
+            reconnecting_lock (asyncio.Lock): A lock to prevent multiple reconnection at the same time
+            upload_semaphore (asyncio.Semaphore): A semaphore to limit the number of parallel uploads
+        Returns:
+            None
         Raises:
             Exception: If the reconnection fails
         """
@@ -64,16 +68,16 @@ class FileManager_Utils:
         client : TelegramManagerClient, 
         target_chat_instance: Entity, 
         message_json : dict[str, any]
-        ) -> FileMessage:
+        ) -> TelegramMessage:
         """
         Send a telegram message with a JSON content
         
         Args:
-            client: The telegram client to use
-            target_chat_instance: The chat to send the message to
-            message_json: The JSON content of the message
+            client (TelegramManagerClient): The telegram client to use
+            target_chat_instance (Entity): The chat to send the message to
+            message_json (dict[str, any]): The JSON content of the message
         Returns:
-            FileMessage: The sent message wrapped in a FileMessage object
+            TelegramMessage: The sent message wrapped in a TelegramMessage object
         Raises:
             TypeError: If the message_json is not a dict
         """
@@ -92,8 +96,8 @@ class FileManager_Utils:
             message=json_text
         )
         
-        # Wrap in FileMessage
-        return FileMessage(telegram_message)
+        # Wrap in TelegramMessage
+        return TelegramMessage(telegram_message)
         
     @staticmethod 
     def progress(
@@ -105,9 +109,11 @@ class FileManager_Utils:
         Callback function to show the progress
         
         Args:
-            sent: The number of bytes processed
-            total: The total number of bytes
-            text: Additional text to show in the progress bar
+            sent (int): The number of bytes processed
+            total (int): The total number of bytes
+            text (str): Additional text to show in the progress bar
+        Returns:
+            None
         """
         # Guard division
         try:

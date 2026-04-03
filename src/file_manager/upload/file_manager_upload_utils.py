@@ -9,7 +9,9 @@ from telethon import utils, helpers, custom, hints
 from telethon.errors import InvalidBufferError
 from telethon.tl import types, TLRequest, functions
 
+# Import constants from config
 from config import MAX_RECONNECT_RETRIES, MIN_RECONNECT_WAIT, PARALLEL_UPLOAD_BLOCKS, PART_MAX_SIZE, SMALL_FILE_THRESHOLD
+
 from file_manager.file_manager_utils import FileManager_Utils
 from file_types.file import File
 from telegram.telegram_manager_client import TelegramManagerClient
@@ -38,12 +40,12 @@ class FileManager_Upload_Utils:
         https://core.telegram.org/api/files
         
         Args:
-            client: Telegram manager client
-            file: File to upload
-            part_size_kb: Size of each part in KB. If None, an appropriate size will be determined
-            file_output_size: Total size of the file to upload. If None, the size will be determined from the file
-            file_output_path: Path of the file to upload. If None, the file name will be used
-            progress_callback: Callback to use to show upload progress. Optional.
+            client (TelegramManagerClient): Telegram manager client
+            file (File): File to upload
+            part_size_kb (float): Size of each part in KB. If None, an appropriate size will be determined
+            file_output_size (int): Total size of the file to upload. If None, the size will be determined from the file
+            file_output_path (str): Path of the file to upload. If None, the file name will be used
+            progress_callback (Optional['hints.ProgressCallback']): Callback to use to show upload progress. Optional.
         Returns:
             InputFile or InputFileBig: The uploaded file as an InputFile or InputFileBig
         Raises:
@@ -62,6 +64,10 @@ class FileManager_Upload_Utils:
         if isinstance(file, (types.InputFile, types.InputFileBig)):
             return file  # Already uploaded
         
+        # Determine the file size if not provided
+        if file_output_size is None:
+            file_output_size = os.path.getsize(file.path)
+            
         # Open the file stream
         async with helpers._FileStream(file.path, file_size=file_output_size) as stream:
             # Determine the file size
@@ -205,16 +211,18 @@ class FileManager_Upload_Utils:
         and releases the semaphore to allow further uploading
         
         Args:
-            client: Telegram manager client
-            reconnecting_lock: A lock to prevent multiple reconnection at the same time
-            upload_semaphore: A semaphore to limit the number of parallel uploads
-            request: The TLRequest to send
-            part_index: Index of the part being uploaded
-            part_count: Total number of parts
-            pos: Current position in the file
-            file_size: Total size of the file
-            progress_callback: Callback to use to show upload progress. Optional.
-            retry: Current retry count
+            client (TelegramManagerClient): Telegram manager client
+            reconnecting_lock (asyncio.Lock): A lock to prevent multiple reconnection at the same time
+            upload_semaphore (asyncio.Semaphore): A semaphore to limit the number of parallel uploads
+            request (TLRequest): The TLRequest to send
+            part_index (int): Index of the part being uploaded
+            part_count (int): Total number of parts
+            pos (int): Current position in the file
+            file_size (int): Total size of the file
+            progress_callback (Optional['hints.ProgressCallback']): Callback to use to show upload progress. Optional.
+            retry (int): Current retry count
+        Returns:
+            None
         Raises:
             RuntimeError: If the upload fails after the maximum number of retries
         """
