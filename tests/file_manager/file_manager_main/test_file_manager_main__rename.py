@@ -32,7 +32,7 @@ async def test_file_manager_main__rename__folder(TelegramManagerClient_init):
         # Check that the subfolder has the new name
         assert subfolder.file_name == "Renamed Subfolder", "The subfolder was not renamed correctly"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
     
@@ -61,6 +61,6 @@ async def test_file_manager_main__rename__file(TelegramManagerClient_init):
         # Check that the file has the new name
         assert file_message.file_name == "Renamed File", "The file was not renamed correctly"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()

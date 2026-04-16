@@ -2,16 +2,10 @@ import os
 import sys
 
 from file_manager.file_manager_main import FileManager
-from file_types.file import File
-from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
-
-from dbJson.telegram_message import TelegramMessage, TelegramMessageType
 
 @pytest.mark.asyncio
 async def test_file_message__version(TelegramManagerClient_init):
@@ -29,6 +23,6 @@ async def test_file_message__version(TelegramManagerClient_init):
         
         assert version is not None and isinstance(version, str), "TelegramMessage.version did not return a valid version string for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.version raised an exception: {e}")
+        raise e
     finally:
         await client.disconnect()

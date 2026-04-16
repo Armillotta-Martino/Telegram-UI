@@ -18,6 +18,6 @@ async def test_telegram_manager_client__start(TelegramManagerClient_init):
         # Check that the client is started and connected
         assert client.is_connected(), "The client did not start and connect successfully"
     except Exception as e:
-        pytest.fail(f"An exception occurred while testing TelegramManagerClient start: {e}")
+        raise e
     finally:
         await client.disconnect()

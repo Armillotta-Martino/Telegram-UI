@@ -21,6 +21,6 @@ async def test_telegram_manager_client__initialize(TelegramManagerClient_init):
         assert isinstance(client, TelegramManagerClient), "The constructor did not create an instance of TelegramManagerClient"
         assert client.is_connected(), "The client did not connect successfully"
     except Exception as e:
-        pytest.fail(f"Initialization of TelegramManagerClient failed with an exception: {e}")
+        raise e
     finally:
         await client.disconnect()

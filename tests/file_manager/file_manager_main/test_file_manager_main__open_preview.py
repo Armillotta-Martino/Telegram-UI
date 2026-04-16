@@ -56,6 +56,6 @@ async def test_file_manager_main__open_preview(monkeypatch, TelegramManagerClien
         else:
             assert recorded['startfile'].endswith('.mp4'), f"startfile called with unexpected path: {recorded['startfile']}"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()

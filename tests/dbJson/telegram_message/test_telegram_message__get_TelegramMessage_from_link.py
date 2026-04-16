@@ -31,6 +31,6 @@ async def test_telegram_message__get_TelegramMessage_from_link(TelegramManagerCl
         assert isinstance(result, TelegramMessage), "The result should be an instance of TelegramMessage"
         assert result.telegram_message.id == root_message.telegram_message.id, "The TelegramMessage ID should match the root message ID"
     except Exception as e:
-        pytest.fail(f"Unexpected exception occurred: {e}")
+        raise e
     finally:
         await client.disconnect()

@@ -45,7 +45,7 @@ async def test_telegram_message__add_children(TelegramManagerClient_init):
         assert (await root_message.get_children(client))[0].file_name == folder_message.file_name, "The added child is not the same as the expected child"
         
     except Exception as e:
-        pytest.fail(f"An unexpected exception occurred: {e}")
+        raise e
     finally:
         # Disconnect the client after the test
         await client.disconnect()
@@ -67,7 +67,7 @@ async def test_telegram_message__add_children__invalid(TelegramManagerClient_ini
             await root_message.add_children(client, target_chat_instance, "This is not a TelegramMessage")
         
     except Exception as e:
-        pytest.fail(f"An unexpected exception occurred: {e}")
+        raise e
     finally:
         # Disconnect the client after the test
         await client.disconnect()

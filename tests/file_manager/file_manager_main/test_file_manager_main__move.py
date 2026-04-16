@@ -34,7 +34,7 @@ async def test_file_manager_main__move(TelegramManagerClient_init):
         # Assert that the parent of subfolder_1 is now subfolder_2
         assert (await subfolder_1.get_parent(client)).telegram_message.id == subfolder_2.telegram_message.id, "Subfolder 1 was not moved under Subfolder 2"
     except Exception as e:
-        pytest.fail(f"An exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()
     
@@ -59,7 +59,7 @@ async def test_file_manager_main__move__to_none(TelegramManagerClient_init):
         with pytest.raises(ValueError):
             await file_manager.move(client, target_chat_instance, subfolder, None)
     except Exception as e:
-        pytest.fail(f"An unexpected exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()
     

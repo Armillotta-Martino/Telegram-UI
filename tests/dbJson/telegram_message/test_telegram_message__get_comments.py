@@ -5,8 +5,6 @@ from file_manager.file_manager_main import FileManager
 from file_types.file import File
 from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
@@ -31,6 +29,6 @@ async def test_file_message__get_comments(TelegramManagerClient_init):
         
         assert len(comments) > 0, "There should be at least one comment of type FILE"
     except Exception as e:
-        pytest.fail(f"An exception occurred: {e}")
+        raise e
     finally:
         await client.disconnect()

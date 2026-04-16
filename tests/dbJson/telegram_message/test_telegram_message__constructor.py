@@ -24,7 +24,7 @@ async def test_telegram_message__constructor(TelegramManagerClient_init):
         # Assert that the TelegramMessage object is created successfully
         assert file_message is not None, "TelegramMessage constructor returned None for a valid file path"
     except Exception as e:
-        pytest.fail(f"TelegramMessage constructor raised an exception for a valid file path: {e}")
+        raise e
     finally:        
         await client.disconnect()
         

@@ -33,6 +33,6 @@ async def test_file_manager_main__delete(TelegramManagerClient_init):
         with pytest.raises(ValueError):
             await child_folder.get_parent(client)
     except Exception as e:
-        pytest.fail(f"Unexpected exception occurred: {e}")
+        raise e
     finally:
         await client.disconnect()

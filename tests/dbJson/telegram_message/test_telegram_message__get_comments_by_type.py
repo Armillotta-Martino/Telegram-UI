@@ -2,12 +2,9 @@ import os
 import sys
 
 from file_manager.file_manager_main import FileManager
-from file_manager.file_manager_utils import FileManager_Utils
 from file_types.file import File
 from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
@@ -36,7 +33,7 @@ async def test_file_message__get_comments_by_type(TelegramManagerClient_init):
         assert len(comments) == 1, "There should be one comment of type FILE"
         assert comments[0].file_name == file_message.file_name, "The comment's file name should match the file message's file name"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.get_comments_by_type() raised an exception for valid input: {e}")
+        raise e
     finally:
         await client.disconnect()
     
@@ -69,7 +66,7 @@ async def test_file_message__get_comments_by_type__no_comments(TelegramManagerCl
         
         assert len(comments) == 0, "There should be no comments of type FILE"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.get_comments_by_type() raised an exception when there are no comments of the specified type: {e}")
+        raise e
     finally:
         await client.disconnect()
     
@@ -82,9 +79,6 @@ async def test_file_message__get_comments_by_type__invalid_type(TelegramManagerC
         # Init variables for TelegramManagerClient
         client, target_chat_instance = TelegramManagerClient_init
             
-        # Get the target chat instance
-        target_chat_instance = await client.get_entity(CHANNEL_NAME)
-            
         # Get the root file message
         root_message = await FileManager.get_root(client, target_chat_instance)
         
@@ -92,6 +86,6 @@ async def test_file_message__get_comments_by_type__invalid_type(TelegramManagerC
         with pytest.raises(ValueError):
             comments = await root_message.get_comments_by_type(client, target_chat_instance, "INVALID_TYPE")
     except Exception as e:
-        pytest.fail(f"TelegramMessage.get_comments_by_type() raised an unexpected exception for invalid comment type: {e}")
+        raise e
     finally:
         await client.disconnect()

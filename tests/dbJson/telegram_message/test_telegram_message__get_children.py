@@ -3,15 +3,12 @@ import sys
 
 from file_manager.file_manager_main import FileManager
 from file_types.file import File
-from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
-from dbJson.telegram_message import TelegramMessage, TelegramMessageType
+from dbJson.telegram_message import TelegramMessage
 
 @pytest.mark.asyncio
 async def test_file_message__get_children(TelegramManagerClient_init):
@@ -42,7 +39,7 @@ async def test_file_message__get_children(TelegramManagerClient_init):
         assert len(children_messages) == 1, f"TelegramMessage.get_children() returned {len(children_messages)} children messages instead of 1 for a valid TelegramMessage object"
         assert children_messages[0].telegram_message.id == file_message.telegram_message.id, f"TelegramMessage.get_children() returned a different child message than expected for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.get_children() raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
         
@@ -73,6 +70,6 @@ async def test_file_message__get_children_no_children(TelegramManagerClient_init
         assert children_messages is not None, "TelegramMessage.get_children() returned None for a valid TelegramMessage object with no children"
         assert len(children_messages) == 0, f"TelegramMessage.get_children() returned {len(children_messages)} children messages instead of 0 for a valid TelegramMessage object with no children"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.get_children() raised an exception for a valid TelegramMessage object with no children: {e}")
+        raise e
     finally:
         await client.disconnect()

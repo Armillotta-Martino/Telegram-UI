@@ -40,6 +40,6 @@ async def test_file_manager_main__create_root(TelegramManagerClient_init, delete
         assert isinstance(await root_folder.get_children(client), list), "The children of the root folder should be a list"
         assert len(await root_folder.get_children(client)) == 0, "The children list of the root folder should be empty"
     except Exception as e:
-        pytest.fail(f"An exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()

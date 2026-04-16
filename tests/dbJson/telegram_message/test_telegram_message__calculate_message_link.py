@@ -28,7 +28,7 @@ async def test_telegram_message__calculate_message_link(TelegramManagerClient_in
         assert message_link == f"https://t.me/c/{target_chat_instance.id}/{root_message.telegram_message.id}", "The calculated message link is not correct"
         
     except Exception as e:
-        pytest.fail(f"An unexpected exception occurred: {e}")
+        raise e
     finally:
         # Disconnect the client after the test
         await client.disconnect()
@@ -53,7 +53,7 @@ async def test_telegram_message__calculate_message_link__invalid(TelegramManager
             TelegramMessage.calculate_message_link(target_chat_instance, "Invalid Message Instance")
             
     except Exception as e:
-        pytest.fail(f"An unexpected exception occurred: {e}")
+        raise e
     finally:
         # Disconnect the client after the test
         await client.disconnect()
@@ -78,7 +78,7 @@ async def test_telegram_message__calculate_message_link__empty_message(TelegramM
             TelegramMessage.calculate_message_link(target_chat_instance, empty_message)
         
     except Exception as e:
-        pytest.fail(f"An unexpected exception occurred: {e}")
+        raise e
     finally:
         # Disconnect the client after the test
         await client.disconnect()

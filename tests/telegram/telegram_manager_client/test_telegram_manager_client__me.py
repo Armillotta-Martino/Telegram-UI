@@ -19,6 +19,6 @@ async def test_telegram_manager_client__me(TelegramManagerClient_init):
         assert client.me is not None, "The me method did not return any user information"
         assert client.me.id is not None, "The me method did not return a valid user ID"
     except Exception as e:
-        pytest.fail(f"An exception occurred while testing me: {e}")
+        raise e
     finally:
         await client.disconnect()

@@ -62,6 +62,6 @@ async def test_file_manager_main__sync(monkeypatch, TelegramManagerClient_init):
         assert all(child.file_name in local_files for child in synced_children), "Synced folder should contain the correct files"
         
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()

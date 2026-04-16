@@ -36,3 +36,9 @@ py-modules = ["main", "config", "utils"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.coverage.run]
+omit = [
+    "src/main.py",
+    "src/ui/*"
+]

@@ -41,6 +41,6 @@ async def test_file_manager_main__upload_file(TelegramManagerClient_init):
         with pytest.raises(ValueError):
             await uploaded_file_message.get_children(client)
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()

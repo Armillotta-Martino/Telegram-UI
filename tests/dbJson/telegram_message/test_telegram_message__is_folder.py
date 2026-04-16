@@ -30,7 +30,7 @@ async def test_file_message__is_folder(TelegramManagerClient_init):
         assert folder_message.is_folder == True, "TelegramMessage.is_folder returned False for a folder message"
         assert root_message.is_folder == True, "TelegramMessage.is_folder returned False for a root message"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.is_folder raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
         

@@ -28,7 +28,7 @@ async def test_file_manager_upload_utils__upload_file_data(TelegramManagerClient
         # Check if the uploaded file data is correct
         assert isinstance(uploaded_file_data, types.InputFile), "Uploaded file data should be of type InputFile"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
     
@@ -50,7 +50,7 @@ async def test_file_manager_upload_utils__upload_file_data__small_video(Telegram
         
         assert isinstance(uploaded_file_data, types.InputFile), "Uploaded file data should be of type InputFile"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
     

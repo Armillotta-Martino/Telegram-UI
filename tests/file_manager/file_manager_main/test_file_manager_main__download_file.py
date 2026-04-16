@@ -50,6 +50,6 @@ async def test_file_manager_main__download_file(monkeypatch, TelegramManagerClie
         os.remove(download_path)
         
     except Exception as e:
-        pytest.fail(f"An exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()

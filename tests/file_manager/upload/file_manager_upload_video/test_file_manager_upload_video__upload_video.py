@@ -8,8 +8,7 @@ from file_manager.upload.file_manager_upload_video import FileManager_Upload_Vid
 from file_types.file import File
 from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
+
 from telethon import types
 
 # Ensure tests import the local `src/` package during test runs
@@ -48,7 +47,7 @@ async def test_file_manager_upload_video__upload_video(TelegramManagerClient_ini
         
         assert isinstance(uploaded_file_data, types.Message), "The upload_video method should return a Message instance for small videos"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
         
@@ -71,7 +70,7 @@ async def test_file_manager_upload_video__upload_video__to_root(TelegramManagerC
             # Upload the file data using FileManager_Upload_Video
             await FileManager_Upload_Video.upload_video(client, target_chat_instance, test_file, root_message)
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
 
@@ -97,7 +96,7 @@ async def test_file_manager_upload_video__upload_video_large_video(TelegramManag
         assert isinstance(uploaded_file_data, list), "The upload_video method should return a list of Message instances for large videos"
         assert all(isinstance(msg, types.Message) for msg in uploaded_file_data), "All elements in the returned list should be Message instances"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
 '''

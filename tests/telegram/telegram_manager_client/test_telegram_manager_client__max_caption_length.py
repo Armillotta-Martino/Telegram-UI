@@ -23,6 +23,6 @@ async def test_telegram_manager_client__max_caption_length(TelegramManagerClient
             
         assert client.max_caption_length == expected_max_caption_length, f"The max_caption_length property did not return the expected value of {expected_max_caption_length} characters"
     except Exception as e:
-        pytest.fail(f"An exception occurred while testing max_caption_length: {e}")
+        raise e
     finally:
         await client.disconnect()

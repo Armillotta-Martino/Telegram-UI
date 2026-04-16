@@ -5,8 +5,6 @@ from file_manager.file_manager_main import FileManager
 from file_manager.upload.file_manager_upload import FileManager_Upload
 from file_types.file import File
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
@@ -42,7 +40,7 @@ async def test_file_manager_upload__upload_file(TelegramManagerClient_init):
         file_part_message = (await file_message.get_comments_by_type(client, target_chat_instance, TelegramMessageType.FILE))[0]
         assert file_part_message.file_size == test_file.size, "The file size in the file message does not match the uploaded file"
     except Exception as e:
-        pytest.fail(f"An exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()
     

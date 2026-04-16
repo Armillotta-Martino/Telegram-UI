@@ -44,6 +44,6 @@ async def test_file_message__refresh(TelegramManagerClient_init):
         assert len(await root_message.get_children(client)) == 1, "Child was not added to the parent TelegramMessage"
         assert (await root_message.get_children(client))[0].file_name == folder_message.file_name, "The added child is not the same as the expected child"
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()

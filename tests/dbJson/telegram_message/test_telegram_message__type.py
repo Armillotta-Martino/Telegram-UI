@@ -5,13 +5,11 @@ from file_manager.file_manager_main import FileManager
 from file_types.file import File
 from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
-from dbJson.telegram_message import TelegramMessage, TelegramMessageType
+from dbJson.telegram_message import TelegramMessageType
 
 @pytest.mark.asyncio
 async def test_file_message__type_root(TelegramManagerClient_init):
@@ -28,7 +26,7 @@ async def test_file_message__type_root(TelegramManagerClient_init):
         # Assert that the type method returns "file"
         assert root_message.type == TelegramMessageType.ROOT, f"TelegramMessage.type returned {root_message.type} instead of 'root' for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.type raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
         
@@ -53,7 +51,7 @@ async def test_file_message__type__file(TelegramManagerClient_init):
         # Assert that the type method returns "file"
         assert file_message.type == TelegramMessageType.FILE, f"TelegramMessage.type returned {file_message.type} instead of 'file' for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.type raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
 
@@ -76,7 +74,7 @@ async def test_file_message__type__folder(TelegramManagerClient_init):
         # Assert that the type method returns "folder"
         assert folder_message.type == TelegramMessageType.FOLDER, f"TelegramMessage.type returned {folder_message.type} instead of 'folder' for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.type raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
 
@@ -112,7 +110,7 @@ async def test_file_message__type__LRV(TelegramManagerClient_init):
         # Assert that the type method returns "LRV"
         assert lrv_file_message.type == TelegramMessageType.LRV, f"TelegramMessage.type returned {lrv_file_message.type} instead of 'LRV' for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.type raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
  
@@ -147,6 +145,6 @@ async def test_file_message__type__thumbnail(TelegramManagerClient_init):
         # Assert that the type method returns "THUMBNAIL"
         assert thumbnail_file_message.type == TelegramMessageType.THUMBNAIL, f"TelegramMessage.type returned {thumbnail_file_message.type} instead of 'THUMBNAIL' for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.type raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()

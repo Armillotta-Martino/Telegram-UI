@@ -26,6 +26,6 @@ async def test_telegram_manager_client__constructor(TelegramManagerClient_init):
         assert client.api_id == API_ID, "The api_id attribute was not set correctly"
         assert client.api_hash == API_HASH, "The api_hash attribute was not set correctly"
     except Exception as e:
-        pytest.fail(f"Constructor raised an exception: {e}")
+        raise e
     finally:
         await client.disconnect()

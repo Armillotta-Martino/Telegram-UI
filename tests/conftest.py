@@ -22,7 +22,7 @@ def download_test_files():
     test_files = {
         "test_video.mp4": "https://iuawmxvsbadbzemjnmix.supabase.co/storage/v1/object/public/Telegram-UI-test-files/test_video.mp4",
         "test_image.jpg": "https://iuawmxvsbadbzemjnmix.supabase.co/storage/v1/object/public/Telegram-UI-test-files/test_image.jpg",
-        "test_file": "https://iuawmxvsbadbzemjnmix.supabase.co/storage/v1/object/public/Telegram-UI-test-files/test_file.txt",
+        "test_file.txt": "https://iuawmxvsbadbzemjnmix.supabase.co/storage/v1/object/public/Telegram-UI-test-files/test_file.txt",
         "test_file_no_extension": "https://iuawmxvsbadbzemjnmix.supabase.co/storage/v1/object/public/Telegram-UI-test-files/test_file_no_extension",
         ".hidden_file": "https://iuawmxvsbadbzemjnmix.supabase.co/storage/v1/object/public/Telegram-UI-test-files/.hidden_file",
     }

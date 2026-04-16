@@ -5,8 +5,6 @@ from file_manager.file_manager_main import FileManager
 from file_types.file import File
 from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
@@ -39,7 +37,7 @@ async def test_telegram_message__file_size(TelegramManagerClient_init):
         
         assert child_file_message.file_size == file.size, f"TelegramMessage.file_size() returned {child_file_message.file_size} instead of {file.size} for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.file_size raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:        
         await client.disconnect()
         
@@ -69,7 +67,7 @@ async def test_telegram_message__file_size__video(TelegramManagerClient_init):
         
         assert child_file_message.file_size == file.size, f"TelegramMessage.file_size() returned {child_file_message.file_size} instead of {file.size} for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.file_size raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:        
         await client.disconnect()
         

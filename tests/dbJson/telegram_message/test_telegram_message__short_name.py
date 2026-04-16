@@ -9,7 +9,7 @@ import pytest
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
-from dbJson.telegram_message import TelegramMessage, TelegramMessageType
+from dbJson.telegram_message import TelegramMessage
 
 @pytest.mark.asyncio
 async def test_file_message__short_name(TelegramManagerClient_init):
@@ -31,7 +31,7 @@ async def test_file_message__short_name(TelegramManagerClient_init):
         
         assert file_message.short_name == "test_file", f"TelegramMessage.short_name returned {file_message.short_name} instead of 'test_file' for a valid TelegramMessage object"
     except Exception as e:
-        pytest.fail(f"TelegramMessage.short_name raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:
         await client.disconnect()
         

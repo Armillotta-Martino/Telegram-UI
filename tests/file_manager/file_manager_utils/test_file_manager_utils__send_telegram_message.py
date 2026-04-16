@@ -21,7 +21,7 @@ async def test_file_manager_utils__send_telegram_message(TelegramManagerClient_i
         json_message = TelegramMessage.generate_json_caption(TelegramMessageType.ROOT, "File name")
         await FileManager_Utils.send_telegram_message(client, target_chat_instance, json_message)
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()
         
@@ -40,6 +40,6 @@ async def test_file_manager_utils__send_telegram_message__invalid_json(TelegramM
         with pytest.raises(TypeError):
             await FileManager_Utils.send_telegram_message(client, target_chat_instance, test_message)
     except Exception as e:
-        pytest.fail(f"Test failed with exception: {e}")
+        raise e
     finally:
         await client.disconnect()

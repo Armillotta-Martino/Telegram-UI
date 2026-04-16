@@ -40,7 +40,7 @@ async def test_file_manager_download__download_file(monkeypatch, TelegramManager
         # Check if the downloaded file is a video
         assert downloaded_file.get_mime() == 'video', "The downloaded file is not a video"
     except Exception as e:
-        pytest.fail(f"An exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()
 
@@ -72,6 +72,6 @@ async def test_file_manager_download__download_file__file(monkeypatch, TelegramM
         # Check if the downloaded file exists
         assert os.path.exists(downloaded_file.path), "The downloaded file does not exist"
     except Exception as e:
-        pytest.fail(f"An exception occurred during the test: {e}")
+        raise e
     finally:
         await client.disconnect()

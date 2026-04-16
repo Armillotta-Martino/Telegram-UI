@@ -3,15 +3,12 @@ import sys
 
 from file_manager.file_manager_main import FileManager
 from file_types.file import File
-from file_types.video import Video
 import pytest
-from telegram.telegram_manager_client import TelegramManagerClient
-from config import API_ID, API_HASH, CHANNEL_NAME
 
 # Ensure tests import the local `src/` package during test runs
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
-from dbJson.telegram_message import TelegramMessage, TelegramMessageType
+from dbJson.telegram_message import TelegramMessage
 
 @pytest.mark.asyncio
 async def test_file_message__get_children_by_file_name(TelegramManagerClient_init):
@@ -45,7 +42,7 @@ async def test_file_message__get_children_by_file_name(TelegramManagerClient_ini
             pytest.fail("TelegramMessage.get_children_by_file_name() did not return the expected child message for a valid file name")
     
     except Exception as e:
-        pytest.fail(f"TelegramMessage.get_children_by_file_name() raised an exception for a valid TelegramMessage object: {e}")
+        raise e
     finally:        
         await client.disconnect()
         

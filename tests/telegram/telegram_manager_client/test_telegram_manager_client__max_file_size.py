@@ -26,6 +26,6 @@ async def test_telegram_manager_client__max_file_size(TelegramManagerClient_init
         
         assert client.max_file_size == expected_max_file_size, f"The max_file_size property did not return the expected value of {expected_max_file_size} bytes"
     except Exception as e:
-        pytest.fail(f"An exception occurred while testing max_file_size: {e}")
+        raise e
     finally:
         await client.disconnect()
